@@ -1,175 +1,79 @@
-# app/infra/db/models.py
 
-import uuid
-from datetime import datetime
-from typing import List, Optional
+'''
+0 Wiring
+    Organization 1 -- N Document
+    Organization 1 -- N Query
+    
+    Document 1 -- N Chunks
+    Query M -- N Chunks    (a query can have many chunks but also a chunk could be parte of other different queries)
+        Relational table (QueryChunk) links them
+        
+    Query 1 -- N LLMUsage
+'''
+# 1 Create all classes with __tablename__
+# 2 Attribute inventory (names only)
+# 3 define the attributes that links an element with another db (usually ids)
+# 4 Define Primary Keys policy
+# 5 Foreign keys + ondelete rules (for every link_id decide which table+column it references and what should happen on delete)
+# 6 define Types + nullability + defaults
 
-from sqlalchemy import (
-    String,
-    Text,
-    DateTime,
-    Integer,
-    Float,
-    ForeignKey,
-    UniqueConstraint,
-    Index,
-)
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.infra.db.base import MyBase
-
-
-# =========================
-# Organization (root tenant)
-# =========================
-
-class Organization(MyBase):
+class Organization:  
     __tablename__ = "organizations"
+    id: PK UUID
+    name: String
+    created_at: Datetime
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
-
-    documents: Mapped[List["Document"]] = relationship(back_populates="organization", cascade="all, delete-orphan")
-    queries: Mapped[List["Query"]] = relationship(back_populates="organization", cascade="all, delete-orphan")
-    llm_usages: Mapped[List["LLMUsage"]] = relationship(back_populates="organization", cascade="all, delete-orphan")
-
-    def __repr__(self) -> str:
-        return f"<Organization(id={self.id}, name={self.name})>"
-
-
-# =========================
-# Document (owned by org)
-# =========================
-
-class Document(MyBase):
+class Document:
     __tablename__ = "documents"
+    id: PK UUID
+    title: String
+    source_type: String
+    content: Text
+    created_at: Datetime
+    
+    organization_id: FK  <- organizations.id, ondelete = "CASCADE" 
+    #if an organization is deleted, all the documents should die too.
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
-    title: Mapped[str] = mapped_column(String(255), nullable=False)
-    content: Mapped[str] = mapped_column(Text, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
-
-    organization: Mapped["Organization"] = relationship(back_populates="documents")
-    chunks: Mapped[List["Chunk"]] = relationship(back_populates="document", cascade="all, delete-orphan")
-
-    __table_args__ = (
-        Index("ix_documents_org_id_created_at", "organization_id", "created_at"),
-    )
-
-    def __repr__(self) -> str:
-        return f"<Document(id={self.id}, title={self.title})>"
-
-
-# =========================
-# Chunk (belongs to document)
-# =========================
-
-class Chunk(MyBase):
-    __tablename__ = "chunks"
-
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    document_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("documents.id", ondelete="CASCADE"), nullable=False, index=True)
-    chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
-    content: Mapped[str] = mapped_column(Text, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
-
-    document: Mapped["Document"] = relationship(back_populates="chunks")
-    query_links: Mapped[List["QueryChunk"]] = relationship(back_populates="chunk", cascade="all, delete-orphan")
-
-    __table_args__ = (
-        UniqueConstraint("document_id", "chunk_index", name="uq_chunks_document_id_chunk_index"),
-        Index("ix_chunks_document_id_chunk_index", "document_id", "chunk_index"),
-    )
-
-    def __repr__(self) -> str:
-        return f"<Chunk(id={self.id}, document_id={self.document_id}, chunk_index={self.chunk_index})>"
-
-
-# =========================
-# Query (belongs to org)
-# =========================
-
-class Query(MyBase):
+class Query:  
     __tablename__ = "queries"
+    id: PK UUID
+    question: Text
+    answer: Text nullable=True
+    latency_ms: Integer nullable=True
+    created_at: Datetime
+    
+    organization_id: FK organizations.id, ondelete = "CASCADE" 
+    
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
-    query_text: Mapped[str] = mapped_column(Text, nullable=False)
-    response_text: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
+class Chunk:  
+    __tablename__ = "chunks"
+    id: PK UUID
+    chunk_index: Integer
+    content: Text
+    token_count: Integer nullable=True
+    created_at: Datetime
+    
+    document_id:  FK documents.id, ondelete = "CASCADE" UUID
+    organization_id: FK organizations.id ondelete = "CASCADE" UUID
 
-    organization: Mapped["Organization"] = relationship(back_populates="queries")
-    query_chunks: Mapped[List["QueryChunk"]] = relationship(back_populates="query", cascade="all, delete-orphan")
-    llm_usages: Mapped[List["LLMUsage"]] = relationship(back_populates="query", cascade="all, delete-orphan")
+class LLMUsage:
+    __tablename__ = "llm_usage"
+    id: PK UUID
+    model_name: String
+    prompt_tokens: Integer
+    completion_tokens: Integer
+    total_tokens: Integer
+    estimated_cost_usd: Float
+    created_at: Datetime 
+    
+    query_id: FK queries.id ondelete = "CASCADE" UUID
 
-    # Convenience many-to-many (read) via association table
-    chunks: Mapped[List["Chunk"]] = relationship("Chunk", secondary="query_chunks", viewonly=True)
-
-    __table_args__ = (
-        Index("ix_queries_org_id_created_at", "organization_id", "created_at"),
-    )
-
-    def __repr__(self) -> str:
-        return f"<Query(id={self.id}, organization_id={self.organization_id})>"
-
-
-# ==========================================
-# QueryChunk (association table + extra data)
-# ==========================================
-
-class QueryChunk(MyBase):
+class QueryChunk:  
     __tablename__ = "query_chunks"
-
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    query_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("queries.id", ondelete="CASCADE"), nullable=False, index=True)
-    chunk_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("chunks.id", ondelete="CASCADE"), nullable=False, index=True)
-    rank: Mapped[int] = mapped_column(Integer, nullable=False)              # 1..k ordering in retrieval
-    score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)    # similarity score, if you store it
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
-
-    query: Mapped["Query"] = relationship(back_populates="query_chunks")
-    chunk: Mapped["Chunk"] = relationship(back_populates="query_links")
-
-    __table_args__ = (
-        UniqueConstraint("query_id", "chunk_id", name="uq_query_chunks_query_id_chunk_id"),
-        UniqueConstraint("query_id", "rank", name="uq_query_chunks_query_id_rank"),
-        Index("ix_query_chunks_query_id_rank", "query_id", "rank"),
-        Index("ix_query_chunks_chunk_id", "chunk_id"),
-    )
-
-    def __repr__(self) -> str:
-        return f"<QueryChunk(query_id={self.query_id}, chunk_id={self.chunk_id}, rank={self.rank})>"
-
-
-# =========================
-# LLMUsage (cost / telemetry)
-# =========================
-
-class LLMUsage(MyBase):
-    __tablename__ = "llm_usages"
-
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
-    query_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("queries.id", ondelete="SET NULL"), nullable=True, index=True)
-
-    provider: Mapped[str] = mapped_column(String(50), nullable=False)       # e.g. "openai"
-    model: Mapped[str] = mapped_column(String(100), nullable=False)         # e.g. "gpt-4.1-mini"
-    prompt_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    completion_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    total_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    cost_usd: Mapped[Optional[float]] = mapped_column(Float, nullable=True) # store if you calculate costs
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
-
-    organization: Mapped["Organization"] = relationship(back_populates="llm_usages")
-    query: Mapped[Optional["Query"]] = relationship(back_populates="llm_usages")
-
-    __table_args__ = (
-        Index("ix_llm_usages_org_id_created_at", "organization_id", "created_at"),
-        Index("ix_llm_usages_query_id_created_at", "query_id", "created_at"),
-    )
-
-    def __repr__(self) -> str:
-        return f"<LLMUsage(id={self.id}, provider={self.provider}, model={self.model}, total_tokens={self.total_tokens})>"
+    similarity_score: Float nullable=True
+    rank: Integer nullable=True
+    
+    query_id: PK FK queries.id ondelete = "CASCADE" UUID
+    chunk_id: PK FK chunks.id ondelete = "CASCADE" UUID
