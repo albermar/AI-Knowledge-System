@@ -1,2 +1,3 @@
 .myvirtual/
 .env
+.docker/.env
