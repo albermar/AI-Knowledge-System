@@ -80,5 +80,3 @@ if __name__ == "__main__":    #test the chunker with a simple example:
     
     for chunk in chunks:
         print(f"Chunk {chunk.index}: '{chunk.text}' (chars {chunk.start_char}-{chunk.end_char})")
-        
-    #how to launch this file in visual studio code? answer: open the terminal in visual studio code (Ctrl+`) and run `python app/domain/chunker.py`
