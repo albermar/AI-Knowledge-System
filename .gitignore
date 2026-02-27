@@ -1,3 +1,9 @@
-.myvirtual/
+__pycache__/
+*.pyc
 .env
-.docker/.env
+.myvirtual/
+.pytest_cache/
+.mypy_cache/
+.dist-info/
+
+HELP.md
