@@ -1,12 +1,15 @@
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from app.infra.db.base import MyBase
 
-import os
+from app.infra.db.db_url_builder import get_db_url
 
-from .db_url import build_database_url
+DATABASE_URL = get_db_url()
 
-engine = create_engine(build_database_url(), echo = True, pool_pre_ping=True)
-SessionLocal = sessionmaker(bind = engine, autoflush = False, autocommit = False)
+engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, expire_on_commit=False, future=True)
+
 
 def get_db_session():
     db = SessionLocal()
@@ -14,3 +17,5 @@ def get_db_session():
         yield db
     finally:
         db.close()
+
+

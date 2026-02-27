@@ -1,13 +1,6 @@
-
-from app.db.base import Base  # Import the Base class from your models
-from app.db import models # Import your models to ensure they are registered with the Base
-#Modify: target_metadata = Base.metadata
-
-import os
-from dotenv import load_dotenv
-load_dotenv()  # Load environment variables from .env file
-
-from app.db.db_url import build_database_url
+from app.infra.db.base import MyBase
+from app.infra.db.db_url_builder import get_db_url 
+import app.infra.db.ormmodels
 
 from logging.config import fileConfig
 
@@ -19,18 +12,22 @@ from alembic import context
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
-config.set_main_option("sqlalchemy.url", build_database_url())
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
+# --- set sqlalchemy.url dynamically (env vars / docker compose, etc.) ---
+db_url = get_db_url()
+config.set_main_option("sqlalchemy.url", db_url) 
+
+
 # add your model's MetaData object here
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-target_metadata = Base.metadata
+target_metadata = MyBase.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -56,6 +53,8 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        compare_type=True,
+        compare_server_default=True,
     )
 
     with context.begin_transaction():
@@ -77,7 +76,10 @@ def run_migrations_online() -> None:
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection, 
+            target_metadata=target_metadata, 
+            compare_type=True,
+            compare_server_default=True,
         )
 
         with context.begin_transaction():
