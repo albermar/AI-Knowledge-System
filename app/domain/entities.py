@@ -35,8 +35,10 @@ class Document:
     title: str  # mandatory
     source_type: str  # mandatory
     content: str  # mandatory
-    id: uuid.UUID = field(default_factory=new_uuid)
-    created_at: datetime = field(default_factory=utc_now)
+    document_hash: Optional[str] = None  # For future deduplication
+    
+    id: uuid.UUID = field(default_factory=new_uuid) #build automatically when creating the object.
+    created_at: datetime = field(default_factory=utc_now) #build automatically when creating the object.
 
     def __post_init__(self) -> None:
         # ---- Title validation ----

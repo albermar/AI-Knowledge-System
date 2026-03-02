@@ -54,6 +54,7 @@ class Document(MyBase):
 
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     source_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    document_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)  # For future deduplication
     content: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 

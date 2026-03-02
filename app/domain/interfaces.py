@@ -54,6 +54,9 @@ class DocumentRepositoryInterface(ABC):
     def add(self, document: Document) -> None:
         ...    
     @abstractmethod
+    def get_by_hash(self, organization_id: uuid.UUID, document_hash: str) -> Document | None: #double safety with organization_id as a parameter.
+        ...
+    @abstractmethod
     def get_by_id(self, organization_id: uuid.UUID, id: uuid.UUID) -> Document | None:#double safety with organization_id as a parameter.
         ...
     @abstractmethod
@@ -141,5 +144,5 @@ class PDFParserInterface(ABC):
 
 class ChunkerInterface(ABC):
     @abstractmethod
-    def chunk_text(self, text: str) -> List[str]:
+    def chunk_text(self, organization_id: uuid.UUID, document_id: uuid.UUID, content: str) -> List[Chunk]:
         ...
