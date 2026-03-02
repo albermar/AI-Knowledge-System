@@ -35,7 +35,7 @@ import uuid
 from typing import List
 from app.domain.entities import Organization, Document, Query, Chunk, QueryChunk, LLMUsage
 
-class OrganizationRepository(ABC):
+class OrganizationRepositoryInterface(ABC):
     @abstractmethod
     def add(self, organization: Organization) -> None:
         ...    
@@ -48,9 +48,8 @@ class OrganizationRepository(ABC):
     @abstractmethod
     def delete(self, id:uuid.UUID) -> None:
         ...
-    
 
-class DocumentRepository(ABC):
+class DocumentRepositoryInterface(ABC):
     @abstractmethod
     def add(self, document: Document) -> None:
         ...    
@@ -64,7 +63,7 @@ class DocumentRepository(ABC):
     def delete(self, organization_id: uuid.UUID, id: uuid.UUID) -> None: #double safety with organization_id as a parameter.
         ...   
 
-class QueryRepository(ABC):
+class QueryRepositoryInterface(ABC):
     @abstractmethod
     def add(self, query: Query) -> None:
         ...    
@@ -78,7 +77,7 @@ class QueryRepository(ABC):
     def update(self, query: Query) -> None:
         ...
 
-class ChunkRepository(ABC):
+class ChunkRepositoryInterface(ABC):
     #Can add 1 or N bulk. 
     @abstractmethod
     def add_many(self, chunks: List[Chunk]) -> None:
@@ -97,7 +96,7 @@ class ChunkRepository(ABC):
     def delete_by_document(self, organization_id: uuid.UUID, document_id: uuid.UUID) -> None: #double safety with organization_id as a parameter.
         ...
     
-class QueryChunkRepository(ABC):
+class QueryChunkRepositoryInterface(ABC):
     @abstractmethod
     def add_links(self, links: List[QueryChunk]) -> None:
         ...
@@ -108,7 +107,7 @@ class QueryChunkRepository(ABC):
     def delete_by_query(self, organization_id: uuid.UUID, query_id: uuid.UUID) -> None: #double safety with organization_id as a parameter.
         ...
 
-class LLMUsageRepository(ABC):
+class LLMUsageRepositoryInterface(ABC):
     @abstractmethod
     def add(self, usage: LLMUsage) -> None:
         ...    
@@ -121,4 +120,26 @@ class LLMUsageRepository(ABC):
     @abstractmethod
     def sum_cost_by_organization(self, organization_id:uuid.UUID) -> float:
         ...
-    
+
+# --- #
+
+class DocumentStorageInterface(ABC):
+    @abstractmethod
+    def save(self, organization_id: uuid.UUID, document_id: uuid.UUID, content: bytes) -> None:
+        ...
+    @abstractmethod
+    def load(self, organization_id: uuid.UUID, document_id: uuid.UUID) -> bytes:
+        ...
+
+# --- # 
+class PDFParserInterface(ABC):
+    @abstractmethod
+    def parse_pdf(self, file_content: bytes) -> str:
+        ...
+
+# --- #
+
+class ChunkerInterface(ABC):
+    @abstractmethod
+    def chunk_text(self, text: str) -> List[str]:
+        ...

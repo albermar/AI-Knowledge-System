@@ -27,7 +27,6 @@ class Organization:
         if len(name) > 255:
             raise ValueError("Organization name cannot exceed 255 characters")
         object.__setattr__(self, "name", name)
-        
 
 @dataclass(frozen=True, slots=True)
 class Document:
@@ -177,3 +176,10 @@ class LLMUsage:
 
         object.__setattr__(self, "model_name", model_name)
         object.__setattr__(self, "total_tokens", total)
+        
+        
+@dataclass(frozen=True, slots=True)
+class IngestDocumentResult:
+    status: bool
+    number_of_chunks: int
+    document_id: uuid.UUID
