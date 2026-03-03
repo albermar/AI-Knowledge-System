@@ -1,3 +1,4 @@
+from typing import List
 import uuid
 
 from app.infra.db.engine import get_db_session
@@ -15,7 +16,7 @@ class PostgreSQL_OrganizationRepository(OrganizationRepositoryInterface):
         self.db_session = db_session
     
     def _to_entity(self, orm_obj: OrganizationORM) -> Organization:
-        return Organization(id=orm_obj.id, name=orm_obj.name)
+        return Organization(id=orm_obj.id, name=orm_obj.name, created_at=orm_obj.created_at)
     
     def add(self, organization: Organization) -> None:
         orm_obj = OrganizationORM(id=organization.id, name=organization.name)
@@ -42,16 +43,69 @@ class PostgreSQL_DocumentRepository(DocumentRepositoryInterface):
     def __init__(self, db_session: Session):
         self.db_session = db_session
     
+    @staticmethod # Because these are just helper functions to convert between ORM and Entity, they don't need access to the instance (self), so we can make them static methods.
+    def _to_entity(orm_obj: DocumentORM) -> Document:
+        return Document(
+            id=orm_obj.id,
+            organization_id=orm_obj.organization_id,
+            title=orm_obj.title,
+            source_type=orm_obj.source_type,
+            document_hash=orm_obj.document_hash,
+            content=orm_obj.content,
+            created_at=orm_obj.created_at
+        )
+    
+    @staticmethod
+    def _to_orm(document: Document) -> DocumentORM:
+        return DocumentORM(
+            id=document.id,
+            organization_id=document.organization_id,
+            title=document.title,
+            source_type=document.source_type,
+            document_hash=document.document_hash,
+            content=document.content,
+            created_at=document.created_at
+        )
+    
     def add(self, document: Document) -> None:
-        ...        
+        orm_obj = self._to_orm(document)
+        self.db_session.add(orm_obj)
+    
     def get_by_hash(self, organization_id: uuid.UUID, document_hash: str) -> Document | None: #double safety with organization_id as a parameter.
-        ...
+        orm_obj = (
+            self.db_session.query(DocumentORM).
+            filter_by(organization_id = organization_id, document_hash = document_hash)
+            .first()
+            )        
+        return None if orm_obj is None else self._to_entity(orm_obj)
+        
     def get_by_id(self, organization_id: uuid.UUID, id: uuid.UUID) -> Document | None: #double safety with organization_id as a parameter.
-        ...
-    def list_by_organization(self, organization_id:uuid.UUID) -> List[Document]:
-        ...
+        #try to return orm object, and if exists return entity object.
+        orm_obj = (
+            self.db_session.query(DocumentORM)
+            .filter_by(id=id, organization_id=organization_id)
+            .first()
+        )
+        return None if orm_obj is None else self._to_entity(orm_obj)
+    
+    def list_by_organization(self, organization_id: uuid.UUID)  -> List[Document]:
+        #fetch orm list with org filter, then convert to entity list.
+        orm_objs = (
+            self.db_session.query(DocumentORM)
+            .filter_by(organization_id=organization_id)
+            .all()            
+        )
+        
+        return [self._to_entity(o) for o in orm_objs]
+
     def delete(self, organization_id: uuid.UUID, id: uuid.UUID) -> None: #double safety with organization_id as a parameter.
-        ...      
+        orm_obj = (
+            self.db_session.query(DocumentORM)
+            .filter_by(id=id, organization_id=organization_id)
+            .first()
+        )
+        if orm_obj is not None:
+            self.db_session.delete(orm_obj)      
 
 class PostgreSQL_ChunkRepository(ChunkRepositoryInterface):
     def __init__(self, db_session: Session):

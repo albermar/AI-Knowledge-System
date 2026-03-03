@@ -57,7 +57,7 @@ class DocumentRepositoryInterface(ABC):
     def get_by_hash(self, organization_id: uuid.UUID, document_hash: str) -> Document | None: #double safety with organization_id as a parameter.
         ...
     @abstractmethod
-    def get_by_id(self, organization_id: uuid.UUID, id: uuid.UUID) -> Document | None:#double safety with organization_id as a parameter.
+    def get_by_id(self, organization_id: uuid.UUID, id: uuid.UUID) -> Document | None: #double safety with organization_id as a parameter.
         ...
     @abstractmethod
     def list_by_organization(self, organization_id:uuid.UUID) -> List[Document]:
