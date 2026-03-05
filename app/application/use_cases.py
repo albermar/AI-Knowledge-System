@@ -161,15 +161,13 @@ class AskQuestion:
     Return answer
     '''
     org_repo: OrganizationRepositoryInterface
-    # doc_repo: DocumentRepositoryInterface #Not necessary for this use case
-    # chunk_repo: ChunkRepositoryInterface #reading chunks for vector search --> Insert in the retriever engine interface instead.
     query_repo: QueryRepositoryInterface #to persist the question and answer
     llm_usage_repo: LLMUsageRepositoryInterface #to persist the LLM usage data
     query_chunk_repo: QueryChunkRepositoryInterface #to persist the relationship between query and chunks used in the prompt. This is useful for analytics and future features, but not strictly necessary for the basic functionality.
     
-    retriever_engine: RetrieverInterface # embedding the question + vector search retrieving relevant chunks. Double duty. 
-    prompt_engine: PromptBuilderInterface # prompt_engine.build_prompt(question, retrieved_chunks) -> prompt
-    llm_engine: LLMInterface #llm_engine.call(prompt) -> answer
+    retriever: RetrieverInterface # embedding the question + vector search retrieving relevant chunks. Double duty. 
+    prompt_builder: PromptBuilderInterface # prompt_engine.build_prompt(question, retrieved_chunks) -> prompt
+    llm_client: LLMInterface #llm_engine.call(prompt) -> answer
     
     
     def execute(self, organization_id: uuid.UUID, question: str) -> str:
