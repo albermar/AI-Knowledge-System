@@ -2,7 +2,7 @@
 from dataclasses import dataclass
 import uuid
 
-from app.domain.entities import Document, IngestDocumentResult, Chunk
+from app.domain.entities import Document, IngestDocumentResult, Chunk, NewOrganizationResult, Organization
 from app.domain.interfaces import ChunkRepositoryInterface, ChunkerInterface, DocumentRepositoryInterface, DocumentStorageInterface, OrganizationRepositoryInterface, PDFParserInterface
 
 import hashlib
@@ -20,7 +20,9 @@ from app.application.exceptions import (
     PersistenceError, 
     DocumentPersistError,
     OrganizationNotFoundError, 
-    ChunkPersistenceError
+    ChunkPersistenceError, 
+    OrganizationAlreadyExistsError, 
+    InvalidOrganizationNameError
 )
 
 
@@ -116,16 +118,27 @@ class IngestDocument:
             raise
 
 
+@dataclass
+class NewOrganization:
+    org_repo: OrganizationRepositoryInterface
 
-
-'''
-2. Use case duties and responsibilities
-    - ✅ Validate the organization_id exists
-    - ✅ Validate file type (only PDFs by now) and file content (max size, not empty, etc)
-    - ✅ Parse the file content to extract content (text)
-    - ✅ Check if the parsed content is empty, if yes reject.
-    - ✅ Check if the document exists, if yes reject, if not, continue.
-    - ✅ Create a new document object (domain entity) and save it both in the repo + storage. The repo will save the metadata + parsed content and the storage will save the original file
-    - ✅ Compute chunks. + save chunks in the chunk repo (database)
-    - ✅ Return the result (status, nº chunks, document id) 
-'''
+    def execute(self, name: str) -> NewOrganizationResult:
+        
+        clean = (name or "").strip()
+        if not clean:
+            raise InvalidOrganizationNameError("Organization name cannot be empty.")
+        
+        if len(clean) > 200:
+            raise InvalidOrganizationNameError("Organization name cannot exceed 200 characters.")
+        
+        if self.org_repo.get_by_name(clean) is not None:
+            raise OrganizationAlreadyExistsError("Organization with this name already exists.")
+        
+        new_org = Organization(name=clean)
+        
+        try:
+            self.org_repo.add(new_org)
+            return NewOrganizationResult(id=new_org.id, name=new_org.name, created_at=new_org.created_at)
+        except Exception as e:
+            raise PersistenceError(f"Failed to persist new organization: {str(e)}") from e
+        

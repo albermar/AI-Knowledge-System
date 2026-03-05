@@ -5,6 +5,11 @@ class UseCaseError(Exception):
 class IngestDocumentError(UseCaseError):
     """Base class for ingest document errors."""
 
+class NewOrganizationError(UseCaseError):
+    """Base class for new organization errors."""
+
+
+# --- # Specific use-case errors
 
 class EmptyFileError(IngestDocumentError):
     pass
@@ -45,4 +50,11 @@ class OrganizationNotFoundError(IngestDocumentError):
     pass
 
 class ChunkPersistenceError(IngestDocumentError):
+    pass
+
+# --- #
+class OrganizationAlreadyExistsError(NewOrganizationError):
+    pass
+
+class InvalidOrganizationNameError(NewOrganizationError):
     pass

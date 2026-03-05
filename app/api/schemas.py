@@ -1,10 +1,12 @@
 #pydantic schemas
+from dataclasses import Field
+import datetime
 import uuid
 
 from pydantic import BaseModel
 from typing import List, Optional
 
-from app.domain.entities import IngestDocumentResult
+from app.domain.entities import IngestDocumentResult, NewOrganizationResult
 
 class IngestDocumentResponse(BaseModel):
     organization_id: Optional[uuid.UUID] = None
@@ -29,3 +31,19 @@ class IngestDocumentResult:
     chunks_created: int
     document_hash: str | None
 '''
+
+class NewOrganizationRequest(BaseModel):
+    name: str = Field(min_length=2, max_length=200)
+
+class NewOrganizationResponse(BaseModel):
+    id: uuid.UUID
+    name: str
+    created_at: datetime    
+    
+    @classmethod
+    def from_domain(cls, result: NewOrganizationResult) -> "NewOrganizationResponse":
+        return cls(
+            id=result.id,
+            name=result.name,
+            created_at=result.created_at
+        )

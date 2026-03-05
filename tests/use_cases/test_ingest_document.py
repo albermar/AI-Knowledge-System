@@ -11,6 +11,8 @@ from app.infra import db
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
+from tests.use_cases.helpers import make_db_session
+
 from app.domain.entities import Document
 
 from app.infra.db.ormmodels import Organization as OrganizationORM
@@ -38,25 +40,6 @@ from app.application.exceptions import (
 
 from dotenv import load_dotenv
 load_dotenv()
-
-
-def make_db_session():
-    user = os.environ["DB_USER"]
-    password = os.environ["DB_PASSWORD"]
-    host = os.environ["DB_HOST"]
-    port = os.environ["DB_PORT"]
-    test_db_name = os.environ["DB_TEST_NAME"]
-    DATABASE_URL = f"postgresql+psycopg://{user}:{password}@{host}:{port}/{test_db_name}"
-
-    engine = create_engine(DATABASE_URL, pool_pre_ping=True)
-    SessionLocal = sessionmaker(
-        autocommit=False,
-        autoflush=False,
-        bind=engine,
-        expire_on_commit=False,
-        future=True,
-    )
-    return SessionLocal()
 
 def read_sample_pdf_bytes():
     filename = "pdf-sample-test.pdf"

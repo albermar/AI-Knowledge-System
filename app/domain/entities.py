@@ -186,3 +186,9 @@ class IngestDocumentResult:
     document_id: uuid.UUID
     chunks_created: int
     document_hash: str | None
+    
+@dataclass(frozen=True)
+class NewOrganizationResult:
+    id: uuid.UUID
+    name: str
+    created_at: datetime
