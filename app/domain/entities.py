@@ -192,3 +192,17 @@ class NewOrganizationResult:
     id: uuid.UUID
     name: str
     created_at: datetime
+    
+@dataclass(frozen=True)
+class AskQuestionResult:
+    query_id: uuid.UUID
+    question: str
+    answer: Optional[str]
+    latency_ms: Optional[int]
+    usage: Optional[LLMUsage]
+    
+@dataclass(frozen=True)
+class RetrievedChunk:
+    chunk_id: uuid.UUID
+    content: str
+    similarity_score: Optional[float]
