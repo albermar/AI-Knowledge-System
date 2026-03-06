@@ -10,6 +10,7 @@ from typing import Optional
 def new_uuid() -> uuid.UUID:
     return uuid.uuid4()
 
+# -- Knowledge related entities -- #
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -35,7 +36,7 @@ class Document:
     title: str  # mandatory
     source_type: str  # mandatory
     content: str  # mandatory
-    document_hash: Optional[str] = None  # For future deduplication
+    document_hash: str | None = None  # For future deduplication
     
     id: uuid.UUID = field(default_factory=new_uuid) #build automatically when creating the object.
     created_at: datetime = field(default_factory=utc_now) #build automatically when creating the object.
@@ -65,14 +66,39 @@ class Document:
         object.__setattr__(self, "source_type", source_type)
         object.__setattr__(self, "content", raw_content)
  
+@dataclass(frozen=True, slots=True)
+class Chunk:
+    # non-default fields first
+    document_id: uuid.UUID
+    organization_id: uuid.UUID
+    chunk_index: int  # mandatory
+    content: str  # mandatory
+    token_count: int | None = None
+    id: uuid.UUID = field(default_factory=new_uuid)
+    created_at: datetime = field(default_factory=utc_now)
 
+    def __post_init__(self) -> None:
+        if self.chunk_index < 0:
+            raise ValueError("Chunk.chunk_index cannot be negative.")
+
+        content = (self.content or "").strip()
+        if not content:
+            raise ValueError("Chunk.content cannot be empty.")
+
+        if self.token_count is not None and self.token_count < 0:
+            raise ValueError("Chunk.token_count cannot be negative.")
+
+        object.__setattr__(self, "content", content)
+
+
+# -- Question answering related entities -- #
 @dataclass(frozen=True, slots=True)
 class Query:
     # non-default fields first
     organization_id: uuid.UUID
     question: str  # mandatory
-    answer: Optional[str] = None
-    latency_ms: Optional[int] = None
+    answer: str | None = None
+    latency_ms: int | None = None
     id: uuid.UUID = field(default_factory=new_uuid)
     created_at: datetime = field(default_factory=utc_now)
 
@@ -104,38 +130,12 @@ class Query:
 
         return replace(self, answer=answer2, latency_ms=latency_ms)
 
-
-@dataclass(frozen=True, slots=True)
-class Chunk:
-    # non-default fields first
-    document_id: uuid.UUID
-    organization_id: uuid.UUID
-    chunk_index: int  # mandatory
-    content: str  # mandatory
-    token_count: Optional[int] = None
-    id: uuid.UUID = field(default_factory=new_uuid)
-    created_at: datetime = field(default_factory=utc_now)
-
-    def __post_init__(self) -> None:
-        if self.chunk_index < 0:
-            raise ValueError("Chunk.chunk_index cannot be negative.")
-
-        content = (self.content or "").strip()
-        if not content:
-            raise ValueError("Chunk.content cannot be empty.")
-
-        if self.token_count is not None and self.token_count < 0:
-            raise ValueError("Chunk.token_count cannot be negative.")
-
-        object.__setattr__(self, "content", content)
-
-
 @dataclass(frozen=True, slots=True)
 class QueryChunk:
     query_id: uuid.UUID
     chunk_id: uuid.UUID
-    similarity_score: Optional[float] = None
-    rank: Optional[int] = None
+    similarity_score: float | None = None
+    rank: int | None = None #what is rank? 
 
     def __post_init__(self) -> None:
         if self.similarity_score is not None and self.similarity_score < 0:
@@ -143,17 +143,16 @@ class QueryChunk:
         if self.rank is not None and self.rank < 1:
             raise ValueError("QueryChunk.rank must be >= 1.")
 
-
 @dataclass(frozen=True, slots=True)
 class LLMUsage:
     # non-default fields first
     query_id: uuid.UUID
     model_name: str  # mandatory
-    prompt_tokens: int = 0
-    completion_tokens: int = 0
+    prompt_tokens: int | None = None
+    completion_tokens: int | None = None
     # aligned with common ORM setups: not nullable in DB -> keep as int in domain
     total_tokens: int = 0
-    estimated_cost_usd: Optional[float] = None
+    estimated_cost_usd: float | None = None
     id: uuid.UUID = field(default_factory=new_uuid)
     created_at: datetime = field(default_factory=utc_now)
 
@@ -164,8 +163,10 @@ class LLMUsage:
         if len(model_name) > 128:
             raise ValueError("LLMUsage.model_name too long (max 128).")
 
-        if self.prompt_tokens < 0 or self.completion_tokens < 0:
-            raise ValueError("Token counts cannot be negative.")
+        if self.prompt_tokens is not None and self.prompt_tokens < 0:
+            raise ValueError("LLMUsage.prompt_tokens cannot be negative.")
+        if self.completion_tokens is not None and self.completion_tokens < 0:
+            raise ValueError("LLMUsage.completion_tokens cannot be negative.")
 
         derived_total = self.prompt_tokens + self.completion_tokens
         total = self.total_tokens if self.total_tokens != 0 else derived_total
@@ -179,30 +180,4 @@ class LLMUsage:
         object.__setattr__(self, "model_name", model_name)
         object.__setattr__(self, "total_tokens", total)
         
-        
-@dataclass(frozen=True)
-class IngestDocumentResult:
-    organization_id: uuid.UUID
-    document_id: uuid.UUID
-    chunks_created: int
-    document_hash: str | None
-    
-@dataclass(frozen=True)
-class NewOrganizationResult:
-    id: uuid.UUID
-    name: str
-    created_at: datetime
-    
-@dataclass(frozen=True)
-class AskQuestionResult:
-    query_id: uuid.UUID
-    question: str
-    answer: Optional[str]
-    latency_ms: Optional[int]
-    usage: Optional[LLMUsage]
-    
-@dataclass(frozen=True)
-class RetrievedChunk:
-    chunk_id: uuid.UUID
-    content: str
-    similarity_score: Optional[float]
+   

@@ -8,6 +8,8 @@ class IngestDocumentError(UseCaseError):
 class NewOrganizationError(UseCaseError):
     """Base class for new organization errors."""
 
+class AskQuestionError(UseCaseError):
+    """Base class for ask question errors."""    
 
 # --- # Specific use-case errors
 
@@ -58,3 +60,9 @@ class OrganizationAlreadyExistsError(NewOrganizationError):
 
 class InvalidOrganizationNameError(NewOrganizationError):
     pass
+
+# Ask question related errors
+
+class EmptyQuestionError(AskQuestionError):
+    pass
+

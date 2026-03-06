@@ -47,7 +47,7 @@ async def ingest_document(file: UploadFile = File(...), db: Session = Depends(ge
         chunk_repo = PostgreSQL_ChunkRepository(db),   
         storage = storage,
         parser = V1_PDFParser(),
-        chunker = V1_Chunker()                              #TODO
+        chunker = V1_Chunker()                              
     )
     
     result = None

@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from pydoc import text
 import uuid
 
-from app.domain.interfaces import ChunkerInterface
+from app.domain.interfaces import ChunkerInterface, PromptBuilderInterface
 from app.domain.entities import Chunk
 from typing import List
 
@@ -72,4 +72,3 @@ class V1_Chunker(ChunkerInterface):
                 )
             )
         return chunk_entities
-    

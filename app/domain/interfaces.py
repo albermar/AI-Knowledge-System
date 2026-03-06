@@ -33,6 +33,7 @@ from abc import ABC, abstractmethod
 
 import uuid
 from typing import List
+from app.domain.types import RetrievedChunk, LLMResponse
 from app.domain.entities import Organization, Document, Query, Chunk, QueryChunk, LLMUsage
 
 class OrganizationRepositoryInterface(ABC):
@@ -150,5 +151,27 @@ class PDFParserInterface(ABC):
 
 class ChunkerInterface(ABC):
     @abstractmethod
-    def chunk_text(self, organization_id: uuid.UUID, document_id: uuid.UUID, content: str) -> List[Chunk]:
+    def chunk_text(self, organization_id: uuid.UUID, document_id: uuid.UUID, content: str) -> list[Chunk]:
+        ...
+        
+# --- Ask Question related interfaces --- #
+
+class EmbedderInterface(ABC):    
+    @abstractmethod
+    def embed(self, text: str) -> List[float]:
+        ...
+
+class RetrieverInterface(ABC):
+    @abstractmethod #ensures the following method is implemented in any concrete class that inherits from this interface.
+    def retrieve_best_chunks(self, question: str, organization_id: uuid.UUID) -> list[RetrievedChunk]:
+        ...
+
+class PromptBuilderInterface (ABC):
+    @abstractmethod
+    def build_prompt(self, question: str, retrieved_chunks: List[RetrievedChunk]) -> str:
+        ...
+
+class LLMInterface(ABC): #Client to call the LLM service (like OpenAI, Azure, etc.)
+    @abstractmethod
+    def call(self, prompt: str) -> LLMResponse:
         ...

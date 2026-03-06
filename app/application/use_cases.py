@@ -2,7 +2,8 @@
 from dataclasses import dataclass
 import uuid
 
-from app.domain.entities import Document, IngestDocumentResult, Chunk, LLMUsage, NewOrganizationResult, Organization, Query, QueryChunk
+from app.application.dto import AskQuestionResult
+from app.domain.entities import Document,Chunk, LLMUsage, Organization, Query, QueryChunk
 from app.domain.interfaces import ChunkRepositoryInterface, ChunkerInterface, DocumentRepositoryInterface, DocumentStorageInterface, LLMUsageRepositoryInterface, OrganizationRepositoryInterface, PDFParserInterface, QueryChunkRepositoryInterface, QueryRepositoryInterface
 
 import hashlib
@@ -22,8 +23,12 @@ from app.application.exceptions import (
     OrganizationNotFoundError, 
     ChunkPersistenceError, 
     OrganizationAlreadyExistsError, 
-    InvalidOrganizationNameError
+    InvalidOrganizationNameError, 
+    EmptyQuestionError
 )
+from app.domain.types import LLMResponse, RetrievedChunk
+
+from app.domain.interfaces import PromptBuilderInterface, RetrieverInterface, EmbedderInterface, LLMInterface
 
 
 @dataclass
@@ -165,52 +170,82 @@ class AskQuestion:
     llm_usage_repo: LLMUsageRepositoryInterface #to persist the LLM usage data
     query_chunk_repo: QueryChunkRepositoryInterface #to persist the relationship between query and chunks used in the prompt. This is useful for analytics and future features, but not strictly necessary for the basic functionality.
     
-    retriever: RetrieverInterface # embedding the question + vector search retrieving relevant chunks. Double duty. 
-    prompt_builder: PromptBuilderInterface # prompt_engine.build_prompt(question, retrieved_chunks) -> prompt
-    llm_client: LLMInterface #llm_engine.call(prompt) -> answer
+    retriever: RetrieverInterface  # Receives the question and returs a list of relevant chunks. ANN search happens here inside
+    prompt_builder: PromptBuilderInterface # with the text question + retrieved relevant chunks, composes the final prompt
+    llm_client: LLMInterface #Calls the LLM and receives an answer. 
     
     
-    def execute(self, organization_id: uuid.UUID, question: str) -> str:
-        # 1. Validating the organization exists.
-        # 2. Embedding the question using an embedding model.
+    def execute(self, organization_id: uuid.UUID, question: str) -> AskQuestionResult:
+        
         # 3. Performing a vector search on the chunks to find relevant ones.
         # 4. Building a prompt with the question and retrieved chunks.
         # 5. Calling the LLM to get an answer.
         # 6. Storing the query, answer, LLM usage, and query-chunk relationships in the respective repositories.
         # 7. Returning the answer.
         
+        # 1. Validating the organization exists.
         if self.org_repo.get_by_id(organization_id) is None:
             raise OrganizationNotFoundError("Organization not found")
         
         clean_question = (question or "").strip()
         if not clean_question:
-            raise ERROR("Question cannot be empty.")
+            raise EmptyQuestionError("Question cannot be empty.")
         
-        embedded_question = self.embedder.embed_question(clean_question)
+        # 2. Retrieve chunks. The retriever needs to have the embedder injected. But that was already done in the composition root, so here we just call the retriever method. Clean architecture is amazing.
+        retrieved_chunks: list[RetrievedChunk] = self.retriever.retrieve_best_chunks(organization_id=organization_id, question=clean_question)
         
-        chunks_ann : list[Chunk] = self.chunk_repo.vector_search(organization_id, embedded_question)
+        # 3. Build rompt for llm        
+        prompt: str = self.prompt_builder.build_prompt(clean_question, retrieved_chunks)
         
-        prompt = self.build_prompt(clean_question, chunks_ann)
+        # 4 call the llm and get the answer (with metadata)
+        llm_response: LLMResponse = self.llm_client.call(prompt)
         
-        answer = self.call_llm(prompt)
+        #Now we have all the pieces. We need to create the DTO for the endpoint (LLMResponse) and also persist in the database: Query, QueryChunk relationships and LLMUsage.
         
         #Persist query, usage and query-chunk relationships. DB commit happens in the endpoint.
-        try:
-            query = Query(organization_id=organization_id, question=clean_question, answer=answer)
-            self.query_repo.add(query)
+        try:     
+            query = Query(
+                organization_id=organization_id, 
+                question=clean_question, 
+                answer=llm_response.generated_answer , 
+                latency_ms=llm_response.latency_ms
+                )
+            self.query_repo.add(query) #TODO implementation
             
-            usage = LLMUsage(query_id=query.id, model_name="gpt-4", prompt_tokens= self.count_tokens(prompt), answer_tokens=self.count_tokens(answer))
+            usage = LLMUsage(
+                query_id=query.id, 
+                model_name=llm_response.model_name, 
+                prompt_tokens = llm_response.prompt_tokens, 
+                completion_tokens = llm_response.completion_tokens,                
+                total_tokens = llm_response.total_tokens,
+                estimated_cost_usd = llm_response.estimated_cost_usd
+                )
+            
             self.llm_usage_repo.add(usage)
-            
+                        
             query_chunks = []
-            for i, chunk in enumerate(chunks_ann):
-                qc = QueryChunk(query_id=query.id, chunk_id=chunk.id, similarity_score=chunk.similarity_score, rank=i+1)
+            
+            for i, rchunk in enumerate(retrieved_chunks):
+                qc = QueryChunk(
+                    query_id=query.id, 
+                    chunk_id= rchunk.chunk_id,
+                    similarity_score=rchunk.similarity_score, 
+                    rank= i+1 #rank starts at 1
+                    )
                 query_chunks.append(qc)
-            self.query_chunk_repo.add_many(query_chunks)
+            self.query_chunk_repo.add_links(query_chunks)
+            
         except Exception as e:
-            raise PersistenceError(f"Failed to persist query, usage or query-chunk relationships: {str(e)}") from e
+            #TODO. Handle map exceptions, I know.
+            raise 
         
-        return answer
+        return AskQuestionResult(
+            query_id=query.id,
+            question=clean_question,
+            answer=llm_response.generated_answer,
+            latency_ms=llm_response.latency_ms,
+            usage = usage
+        )
     
         
         
@@ -218,4 +253,3 @@ class AskQuestion:
         
         
         
-        pass
