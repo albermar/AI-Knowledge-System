@@ -168,7 +168,7 @@ class PostgreSQL_ChunkRepository(ChunkRepositoryInterface):
             distance_expression.label("distance")
             )
         .filter(ChunkORM.organization_id == organization_id)
-        .order_by(ChunkORM.embedding.cosine_distance(embedded_question))
+        .order_by(distance_expression)
         .limit(top_k)
         .all()
         )

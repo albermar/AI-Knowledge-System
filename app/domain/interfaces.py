@@ -90,6 +90,9 @@ class ChunkRepositoryInterface(ABC):
     def get_by_document(self, organization_id: uuid.UUID, document_id: uuid.UUID) -> List[Chunk]: #double safety with organization_id as a parameter.
         ...
     
+    @abstractmethod
+    def vector_search(self, organization_id: uuid.UUID, embedded_question: list[float], top_k: int = 5) -> list[RetrievedChunk]: #double safety with organization_id as a parameter.
+        ...
     #@abstractmethod
     #def get_by_ids_in_order(self, organization_id: uuid.UUID, ids: List[uuid.UUID]) -> List[Chunk]: #double safety with organization_id as a parameter.
         """
@@ -151,7 +154,7 @@ class PDFParserInterface(ABC):
 
 class ChunkerInterface(ABC):
     @abstractmethod
-    def chunk_text(self, organization_id: uuid.UUID, document_id: uuid.UUID, content: str) -> list[Chunk]:
+    def chunk_text(self, content: str) -> list[str]:
         ...
         
 # --- Ask Question related interfaces --- #

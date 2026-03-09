@@ -9,6 +9,7 @@ from app.domain.interfaces import ChunkRepositoryInterface, ChunkerInterface, Do
 import hashlib
 
 from app.application.exceptions import (
+    ChunkEmbeddingError,
     LLMUsagePersistenceError,
     NoRelevantChunksFoundError,
     QueryChunkPersistenceError,
@@ -34,6 +35,13 @@ from app.domain.types import LLMResponse, RetrievedChunk
 
 from app.domain.interfaces import PromptBuilderInterface, RetrieverInterface, EmbedderInterface, LLMInterface
 
+from app.application.dto import IngestDocumentResult, NewOrganizationResult
+
+
+def approx_token_count(text: str) -> int:
+    #we approximate 4 chars per token. Replace later with real tokenizer. 
+    return max(1, (len(text) + 3) // 4)
+
 
 @dataclass
 class IngestDocument:
@@ -41,11 +49,12 @@ class IngestDocument:
     doc_repo: DocumentRepositoryInterface
     chunk_repo: ChunkRepositoryInterface
     storage: DocumentStorageInterface
+    embedder: EmbedderInterface
     parser: PDFParserInterface
     chunker: ChunkerInterface
 
 
-    def execute(self, organization_id: uuid.UUID, file_content: bytes, filename: str) -> IngestDocumentResult:
+    def execute(self, organization_id: uuid.UUID, file_content: bytes, filename: str) -> IngestDocumentResult: 
 
         if not file_content:
             raise EmptyFileError("The provided file is empty.")
@@ -65,8 +74,6 @@ class IngestDocument:
         
         # Dedup: org + sha256(file bytes)
         document_hash = hashlib.sha256(file_content).hexdigest()
-        #print(f"Computed document hash: {document_hash}")
-        #print(f"Document with hash {self.doc_repo.get_by_hash(organization_id, document_hash).document_hash}")
         if self.doc_repo.get_by_hash(organization_id, document_hash) is not None:            
             raise DocumentAlreadyExistsError("Document already exists.")
         
@@ -95,16 +102,35 @@ class IngestDocument:
             except Exception as e:
                 raise StorageWriteError(f"Failed to save document file: {str(e)}") from e
             
-            #Chunking
+            #Chunk text into plain strings
             try: 
-                chunks: list[Chunk] = self.chunker.chunk_text(
-                organization_id=organization_id, 
-                document_id=document.id, 
-                content=parsed_content
-                )
+                chunk_texts: list[str] = self.chunker.chunk_text(content=parsed_content)
             except Exception as e:
                 raise ChunkingError(f"Failed to chunk document content: {str(e)}") from e
             
+            if not chunk_texts:
+                raise ChunkingError("Chunker produced no chunks")
+            
+            #Build chunk entities (including embeddings)
+            try:
+                chunks: list[Chunk] = [] 
+                for i, chunk_text in enumerate(chunk_texts):
+                    embedding = self.embedder.embed_text(chunk_text)
+                    chunks.append(
+                        Chunk(
+                            document_id=document.id,
+                            organization_id=organization_id,
+                            chunk_index=i,
+                            content=chunk_text,
+                            embedding=embedding,
+                            token_count = approx_token_count(chunk_text)
+                        )
+                    )
+                
+            except Exception as e:
+                raise ChunkEmbeddingError(f"Failed to create chunk entities with embeddings: {str(e)}") from e  
+                
+            #persist chunks:
             try:             
                 self.chunk_repo.add_many(chunks)
             except Exception as e:
@@ -176,7 +202,7 @@ class AskQuestion:
     
     retriever: RetrieverInterface
     prompt_builder: PromptBuilderInterface # with the text question + retrieved relevant chunks, composes the final prompt
-    llm_client: LLMInterface #Calls the LLM and receives an answer. 
+    llm_client: LLMInterface #Calls the LLM and receives an answer.
     
     
     def execute(self, organization_id: uuid.UUID, question: str) -> AskQuestionResult:

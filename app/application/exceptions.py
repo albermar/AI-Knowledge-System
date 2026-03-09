@@ -54,6 +54,9 @@ class OrganizationNotFoundError(IngestDocumentError):
 class ChunkPersistenceError(IngestDocumentError):
     pass
 
+class ChunkEmbeddingError(IngestDocumentError):
+    pass
+
 # --- #
 class OrganizationAlreadyExistsError(NewOrganizationError):
     pass
