@@ -71,12 +71,12 @@ class QueryRepositoryInterface(ABC):
     @abstractmethod
     def add(self, query: Query) -> None:
         ...    
-    @abstractmethod
-    def get_by_id(self, organization_id:uuid.UUID, id:uuid.UUID) -> Query | None: #double safety with organization_id as a parameter.
-        ...
-    @abstractmethod
-    def list_by_organization(self, organization_id:uuid.UUID) -> List[Query]:
-        ...
+    #@abstractmethod
+    #def get_by_id(self, organization_id:uuid.UUID, id:uuid.UUID) -> Query | None: #double safety with organization_id as a parameter.
+    #    ...
+    #@abstractmethod
+    #def list_by_organization(self, organization_id:uuid.UUID) -> List[Query]:
+    #    ...
     @abstractmethod
     def update(self, query: Query) -> None:
         ...
@@ -105,31 +105,30 @@ class ChunkRepositoryInterface(ABC):
     #def delete_by_document(self, organization_id: uuid.UUID, document_id: uuid.UUID) -> None: #double safety with organization_id as a parameter.
     #    ...
     
-    
 class QueryChunkRepositoryInterface(ABC):
     @abstractmethod
     def add_links(self, links: List[QueryChunk]) -> None:
         ...
-    @abstractmethod
-    def get_chunks_for_query(self, organization_id: uuid.UUID, query_id: uuid.UUID) -> List[QueryChunk]: #double safety with organization_id as a parameter.
-        ...
-    @abstractmethod
-    def delete_by_query(self, organization_id: uuid.UUID, query_id: uuid.UUID) -> None: #double safety with organization_id as a parameter.
-        ...
+    #@abstractmethod
+    #def get_chunks_for_query(self, organization_id: uuid.UUID, query_id: uuid.UUID) -> List[QueryChunk]: #double safety with organization_id as a parameter.
+    #    ...
+    #@abstractmethod
+    #def delete_by_query(self, organization_id: uuid.UUID, query_id: uuid.UUID) -> None: #double safety with organization_id as a parameter.
+    #    ...
 
 class LLMUsageRepositoryInterface(ABC):
     @abstractmethod
     def add(self, usage: LLMUsage) -> None:
         ...    
-    @abstractmethod
-    def list_by_query(self, organization_id: uuid.UUID, query_id: uuid.UUID) -> List[LLMUsage]: #double safety with organization_id as a parameter.
-        ...
-    @abstractmethod
-    def sum_tokens_by_organization(self, organization_id:uuid.UUID) -> int:
-        ...
-    @abstractmethod
-    def sum_cost_by_organization(self, organization_id:uuid.UUID) -> float:
-        ...
+    #@abstractmethod
+    #def list_by_query(self, organization_id: uuid.UUID, query_id: uuid.UUID) -> List[LLMUsage]: #double safety with organization_id as a parameter.
+    #    ...
+    #@abstractmethod
+    #def sum_tokens_by_organization(self, organization_id:uuid.UUID) -> int:
+    #    ...
+    #@abstractmethod
+    #def sum_cost_by_organization(self, organization_id:uuid.UUID) -> float:
+    #    ...
 
 # --- #
 

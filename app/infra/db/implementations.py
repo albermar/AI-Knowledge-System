@@ -214,3 +214,74 @@ class PostgreSQL_QueryRepository(QueryRepositoryInterface):
         orm_obj = self._to_orm(query)
         self.db_session.add(orm_obj)
         self.db_session.flush()
+    
+    def update(self, query: Query) -> None:
+        orm_obj = self.db_session.get(QueryORM, query.id)
+        if orm_obj is not None:
+            orm_obj.question = query.question
+            orm_obj.answer = query.answer
+            orm_obj.latency_ms = query.latency_ms
+            self.db_session.flush()
+
+class PostgreSQL_LLMUsageRepository(LLMUsageRepositoryInterface):
+    
+    def __init__(self, db_session: Session):
+        self.db_session = db_session
+        
+    @staticmethod    
+    def _to_entity(orm_obj: LLMUsageORM) -> LLMUsage:
+        return LLMUsage(
+            id=orm_obj.id,
+            query_id=orm_obj.query_id,
+            model_name=orm_obj.model_name,
+            prompt_tokens=orm_obj.prompt_tokens,
+            completion_tokens=orm_obj.completion_tokens,
+            total_tokens=orm_obj.total_tokens,
+            estimated_cost_usd=orm_obj.estimated_cost_usd,
+            created_at=orm_obj.created_at,
+        )
+        
+    @staticmethod
+    def _to_orm(llm_usage: LLMUsage) -> LLMUsageORM:
+        return LLMUsageORM(
+            id=llm_usage.id,
+            query_id=llm_usage.query_id,
+            model_name=llm_usage.model_name,
+            prompt_tokens=llm_usage.prompt_tokens,
+            completion_tokens=llm_usage.completion_tokens,
+            total_tokens=llm_usage.total_tokens,
+            estimated_cost_usd=llm_usage.estimated_cost_usd,
+            created_at=llm_usage.created_at,
+        )   
+    def add(self, llm_usage: LLMUsage) -> None:
+        orm_obj = self._to_orm(llm_usage)
+        self.db_session.add(orm_obj)
+        self.db_session.flush()
+
+
+class PostgreSQL_QueryChunkRepository(QueryChunkRepositoryInterface):
+    def __init__(self, db_session: Session):
+        self.db_session = db_session
+    
+    @staticmethod
+    def _to_entity(orm_obj: QueryChunkORM) -> QueryChunk:
+        return QueryChunk(
+            query_id=orm_obj.query_id,
+            chunk_id=orm_obj.chunk_id,
+            similarity_score=orm_obj.similarity_score,
+            rank=orm_obj.rank
+        )
+        
+    @staticmethod
+    def _to_orm(query_chunk: QueryChunk) -> QueryChunkORM:
+        return QueryChunkORM(
+            query_id=query_chunk.query_id,
+            chunk_id=query_chunk.chunk_id,
+            similarity_score=query_chunk.similarity_score,
+            rank=query_chunk.rank
+        )
+    
+    def add_links(self, query_chunks: List[QueryChunk]) -> None:
+        orm_objs = [self._to_orm(qc) for qc in query_chunks]
+        self.db_session.add_all(orm_objs)
+        self.db_session.flush()
