@@ -158,7 +158,7 @@ class ChunkerInterface(ABC):
 
 class EmbedderInterface(ABC):    
     @abstractmethod
-    def embed(self, text: str) -> List[float]:
+    def embed_text(self, text: str) -> List[float]:
         ...
 
 class RetrieverInterface(ABC):

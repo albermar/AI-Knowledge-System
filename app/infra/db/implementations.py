@@ -160,9 +160,30 @@ class PostgreSQL_ChunkRepository(ChunkRepositoryInterface):
         return [self._to_entity(o) for o in orm_objs]
     
     def vector_search(self, organization_id: uuid.UUID, embedded_question: list[float], top_k: int = 5) -> list[RetrievedChunk]:
-        ????????????
-        ????????????
-        ????????????
+        distance_expression = ChunkORM.embedding.cosine_distance(embedded_question)
+        
+        rows = (
+        self.db_session.query(
+            ChunkORM, 
+            distance_expression.label("distance")
+            )
+        .filter(ChunkORM.organization_id == organization_id)
+        .order_by(ChunkORM.embedding.cosine_distance(embedded_question))
+        .limit(top_k)
+        .all()
+        )
+        
+        #build retrieved chunks with chunk id, content, chunk index and similarity score:
+        return [
+        RetrievedChunk(
+            chunk_id=orm_obj.id,
+            content=orm_obj.content,
+            chunk_index=orm_obj.chunk_index,
+            similarity_score=1.0 - float(distance),
+        )
+        for orm_obj, distance in rows
+    ]
+        
 
 class PostgreSQL_QueryRepository(QueryRepositoryInterface):
     def __init__(self, db_session: Session):

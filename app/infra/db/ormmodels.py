@@ -120,7 +120,7 @@ class Chunk(MyBase):
 
     chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
-    embedding: Mapped[List[float]] = mapped_column(Vector(1536), nullable=False)  # Store as JSON string or use a separate table for embeddings
+    embedding: Mapped[List[float]] = mapped_column(Vector(384), nullable=False)
     token_count: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 

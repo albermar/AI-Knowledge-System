@@ -174,7 +174,7 @@ class AskQuestion:
     llm_usage_repo: LLMUsageRepositoryInterface #to persist the LLM usage data
     query_chunk_repo: QueryChunkRepositoryInterface #to persist the relationship between query and chunks used in the prompt. This is useful for analytics and future features, but not strictly necessary for the basic functionality.
     
-    retriever: RetrieverInterface  # Receives the question and returs a list of relevant chunks. ANN search happens here inside
+    retriever: RetrieverInterface
     prompt_builder: PromptBuilderInterface # with the text question + retrieved relevant chunks, composes the final prompt
     llm_client: LLMInterface #Calls the LLM and receives an answer. 
     
@@ -189,7 +189,7 @@ class AskQuestion:
         if not clean_question:
             raise EmptyQuestionError("Question cannot be empty.")
         
-        # 3. PErist query as soon as the request is valid.
+        # 3. Persist query as soon as the request is valid.
         try:
             query = Query(
                 organization_id=organization_id, 

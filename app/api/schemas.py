@@ -23,15 +23,6 @@ class IngestDocumentResponse(BaseModel):
             document_id=result.document_id
         )
 
-'''
-@dataclass(frozen=True)
-class IngestDocumentResult:
-    organization_id: uuid.UUID
-    document_id: uuid.UUID
-    chunks_created: int
-    document_hash: str | None
-'''
-
 class NewOrganizationRequest(BaseModel):
     name: str = Field(min_length=2, max_length=200)
 

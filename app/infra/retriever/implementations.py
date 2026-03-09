@@ -13,6 +13,11 @@ class V1_Retriever(RetrieverInterface):
         
     def retrieve_best_chunks(self, organization_id: uuid.UUID, question: str) -> list[RetrievedChunk]:
         # 1. Embed the question using the embedder. 
-        embedded_question = self.embedder.embed_question(question)
-        chunks_ann : list[Chunk] = self.chunk_repo.vector_search(organization_id, embedded_question)
-        return chunks_ann
+        embedded_question = self.embedder.embed_text(question)
+        
+        # We don't save the embed of the question for now.
+        
+        retrieved_chunks: list[RetrievedChunk] = self.chunk_repo.vector_search(organization_id, embedded_question, top_k=5)
+        
+        return retrieved_chunks
+        
