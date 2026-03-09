@@ -92,7 +92,7 @@ class Chunk:
         if self.token_count is not None and self.token_count < 0:
             raise ValueError("Chunk.token_count cannot be negative.")
 
-        if not self.embedding:
+        if self.embedding is None or len(self.embedding) == 0:
             raise ValueError("Chunk.embedding cannot be empty.")
 
         object.__setattr__(self, "content", content)

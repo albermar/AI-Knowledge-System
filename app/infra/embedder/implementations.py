@@ -1,8 +1,8 @@
 from app.domain.interfaces import EmbedderInterface
-from openai import OpenAI
+#from openai import OpenAI
 from sentence_transformers import SentenceTransformer
 
-
+'''
 class OpenAIEmbedder(EmbedderInterface):
     def __init__(self, api_key: str, model_name: str):
         self.client = OpenAI(api_key=api_key)
@@ -16,6 +16,8 @@ class OpenAIEmbedder(EmbedderInterface):
         response = self.client.embeddings.create(input=cleaned_text, model=self.model_name)
         
         return response.data[0].embedding
+
+'''
 
 #we will use this locally for now. In the future we could add openai embedder.
 # 384 dimensions. Change orm model and entity to this dimensions.

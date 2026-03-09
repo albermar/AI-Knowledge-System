@@ -129,8 +129,7 @@ class PostgreSQL_ChunkRepository(ChunkRepositoryInterface):
             token_count=orm_obj.token_count,
             id=orm_obj.id,
             created_at=orm_obj.created_at, 
-            embedding=orm_obj.embedding
-        )
+            embedding=[float(x) for x in orm_obj.embedding])
         
     @staticmethod
     def _to_orm(chunk: Chunk) -> ChunkORM:
