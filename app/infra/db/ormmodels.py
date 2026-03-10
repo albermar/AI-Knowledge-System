@@ -31,7 +31,7 @@ class Organization(MyBase):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    api_key_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    api_key_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)  # Store hash of API key for authentication
     
     documents: Mapped[List["Document"]] = relationship(back_populates="organization", cascade="all, delete-orphan")
     queries: Mapped[List["Query"]] = relationship(back_populates="organization", cascade="all, delete-orphan")
