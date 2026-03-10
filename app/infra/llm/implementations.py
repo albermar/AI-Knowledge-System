@@ -9,7 +9,7 @@ class FakeLLMClient(LLMInterface):
             raise ValueError("Prompt cannot be empty.")
 
         return LLMResponse(
-            generated_answer=f"This is a fake answer generated for manual testing with a {len(clean_prompt.split())} words prompt",
+            generated_answer=f"This is a fake answer generated for manual testing with a {len(clean_prompt.split())} words prompt \n Prompt was: {clean_prompt}",
             model_name="fake-llm",
             prompt_tokens=120,
             completion_tokens=10,
