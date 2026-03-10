@@ -17,10 +17,20 @@ class PostgreSQL_OrganizationRepository(OrganizationRepositoryInterface):
         self.db_session = db_session
     
     def _to_entity(self, orm_obj: OrganizationORM) -> Organization:
-        return Organization(id=orm_obj.id, name=orm_obj.name, created_at=orm_obj.created_at)
+        return Organization(
+            id=orm_obj.id, 
+            name=orm_obj.name, 
+            created_at=orm_obj.created_at, 
+            api_key_hash=orm_obj.api_key_hash
+        )
     
     def add(self, organization: Organization) -> None:
-        orm_obj = OrganizationORM(id=organization.id, name=organization.name)
+        orm_obj = OrganizationORM(
+            id=organization.id, 
+            name=organization.name, 
+            created_at=organization.created_at, 
+            api_key_hash=organization.api_key_hash
+        )
         self.db_session.add(orm_obj)    
         self.db_session.flush()
         
@@ -35,7 +45,15 @@ class PostgreSQL_OrganizationRepository(OrganizationRepositoryInterface):
             .first()
         )
         return None if orm_obj is None else self._to_entity(orm_obj)
-       
+    
+    def get_by_api_key_hash(self, api_key_hash: str) -> Organization | None:
+        orm_obj = (
+            self.db_session.query(OrganizationORM)
+            .filter_by(api_key_hash=api_key_hash)
+            .first()
+        )
+        return None if orm_obj is None else self._to_entity(orm_obj)
+    
     def delete(self, id: uuid.UUID) -> None:
         orm_obj = self.db_session.get(OrganizationORM, id)
         if orm_obj is not None:
@@ -257,7 +275,6 @@ class PostgreSQL_LLMUsageRepository(LLMUsageRepositoryInterface):
         orm_obj = self._to_orm(llm_usage)
         self.db_session.add(orm_obj)
         self.db_session.flush()
-
 
 class PostgreSQL_QueryChunkRepository(QueryChunkRepositoryInterface):
     def __init__(self, db_session: Session):

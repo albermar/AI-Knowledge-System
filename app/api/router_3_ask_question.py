@@ -3,9 +3,11 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.api.dependencies import get_current_organization
 from app.infra.db.engine import get_db_session
 from app.api.schemas import AskQuestionRequest, AskQuestionResponse
 
+from app.domain.entities import Organization
 from app.application.use_cases import AskQuestion
 from app.application.exceptions import (
     EmptyQuestionError,
@@ -39,12 +41,9 @@ DEFAULT_ORGANIZATION_ID = uuid.UUID("00000000-0000-0000-0000-000000000000")
 @router.post("/questions", response_model=AskQuestionResponse, status_code=200)
 async def ask_question(
     payload: AskQuestionRequest,
+    organization: Organization = Depends(get_current_organization),
     db: Session = Depends(get_db_session),
 ):
-    organization_id = DEFAULT_ORGANIZATION_ID
-    organization_id = uuid.UUID("08e7b03b-3301-4c0f-8ea4-f4753b6510b8") #QUITAR
-
-
     # repositories
     org_repo = PostgreSQL_OrganizationRepository(db)
     query_repo = PostgreSQL_QueryRepository(db)
@@ -76,7 +75,7 @@ async def ask_question(
 
     try:
         result = use_case.execute(
-            organization_id=organization_id,
+            organization_id=organization.id, #here comes the org id from the auth context returned by the get_current_organization dependency. If the organization didn't exist or the API key was invalid, it would have already raised an HTTPException and we wouldn't reach this point.
             question=payload.question,
         )
 

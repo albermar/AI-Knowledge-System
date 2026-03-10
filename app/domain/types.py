@@ -1,7 +1,6 @@
 # -- Intermediate data structures used inside use cases -- #
 
 from dataclasses import dataclass
-from typing import Optional
 import uuid
 
 

@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 from datetime import datetime
 import uuid
 
-from typing import List, Optional
+from typing import Optional
 
 from app.application.dto import (
     IngestDocumentResult,
@@ -32,6 +32,7 @@ class IngestDocumentResponse(BaseModel):
 class NewOrganizationResponse(BaseModel):
     id: uuid.UUID
     name: str
+    api_key: str
     created_at: datetime    
     
     @classmethod
@@ -39,6 +40,7 @@ class NewOrganizationResponse(BaseModel):
         return cls(
             id=result.id,
             name=result.name,
+            api_key=result.api_key,
             created_at=result.created_at
         )
 

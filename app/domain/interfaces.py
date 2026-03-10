@@ -49,6 +49,10 @@ class OrganizationRepositoryInterface(ABC):
     @abstractmethod
     def delete(self, id:uuid.UUID) -> None:
         ...
+    @abstractmethod
+    def get_by_api_key_hash(self, api_key_hash: str) -> Organization | None:
+        ...
+
 
 class DocumentRepositoryInterface(ABC):
     @abstractmethod

@@ -17,6 +17,7 @@ def utc_now() -> datetime:
 @dataclass(frozen=True, slots=True)
 class Organization:
     name: str #Mandatory field, no default value
+    api_key_hash: str #mandatory field, no default value
     
     id: uuid.UUID = field(default_factory=new_uuid)
     created_at: datetime = field(default_factory=utc_now)
@@ -27,7 +28,16 @@ class Organization:
             raise ValueError("Organization name cannot be empty")
         if len(name) > 255:
             raise ValueError("Organization name cannot exceed 255 characters")
+        
+        #chech if the api key hash is valid (len > 0 and less than 64 chars)
+        api_key_hash = (self.api_key_hash or "").strip()
+        if not api_key_hash:
+            raise ValueError("API key hash cannot be empty")
+        if len(api_key_hash) != 64:
+            raise ValueError("API key hash must be exactly 64 characters")
+                
         object.__setattr__(self, "name", name)
+        object.__setattr__(self, "api_key_hash", api_key_hash)
 
 @dataclass(frozen=True, slots=True)
 class Document:

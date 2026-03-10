@@ -3,6 +3,7 @@ __pycache__/
 .env
 .myvirtual/
 samples/
+storage/
 .pytest_cache/
 .mypy_cache/
 .dist-info/

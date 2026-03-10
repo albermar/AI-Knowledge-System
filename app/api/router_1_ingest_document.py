@@ -1,6 +1,8 @@
 from datetime import datetime
 import uuid
 
+from app.api.dependencies import get_current_organization
+from app.domain.entities import Organization
 from app.application.exceptions import ChunkPersistenceError, ChunkingError, DocumentAlreadyExistsError, DocumentPersistError, EmptyFileError, OrganizationNotFoundError, ParsingError, StorageDeleteError, StorageWriteError
 from fastapi import File, UploadFile, Depends, HTTPException
 from fastapi import APIRouter
@@ -23,8 +25,11 @@ MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024  #TODO: get from config
 DEFAULT_STORAGE_PATH = "./storage" #TODO: get from config
 
 @router.post("/ingest-document", response_model = IngestDocumentResponse )
-async def ingest_document(file: UploadFile = File(...), db: Session = Depends(get_db_session)):    
-    default_organization_id = uuid.UUID("00000000-0000-0000-0000-000000000000") #TODO: get from auth context or request header. For now, we use a default one for testing.
+async def ingest_document(
+        file: UploadFile = File(...), 
+        organization: Organization = Depends(get_current_organization),
+        db: Session = Depends(get_db_session)
+    ):
     
     file_bytes = await file.read() 
     filename = file.filename or ("doc-" + datetime.now().strftime("%Y%m%d%H%M%S"))
@@ -49,10 +54,9 @@ async def ingest_document(file: UploadFile = File(...), db: Session = Depends(ge
         parser = V1_PDFParser(),
         chunker = V1_Chunker()                              
     )
-    default_organization_id = uuid.UUID("08e7b03b-3301-4c0f-8ea4-f4753b6510b8") # QUITAR
     result = None
     try:        
-        result = use_case.execute(default_organization_id, file_bytes, filename)
+        result = use_case.execute(organization.id, file_bytes, filename) #organization.id comes from the get_current_organization dependency, which means that if the API key was invalid or the organization didn't exist, it would have already raised an HTTPException and we wouldn't reach this point.
         db.commit()
         return IngestDocumentResponse.from_domain(result)
     
@@ -69,7 +73,7 @@ async def ingest_document(file: UploadFile = File(...), db: Session = Depends(ge
         db.rollback()
         if result is not None:
             try:
-                storage.delete(default_organization_id, result.document_id)
+                storage.delete(organization.id, result.document_id)
             except Exception:
                 pass
         raise HTTPException(status_code=500, detail=str(e))
@@ -80,7 +84,7 @@ async def ingest_document(file: UploadFile = File(...), db: Session = Depends(ge
         db.rollback()
         if result is not None:
             try: 
-                storage.delete(default_organization_id, result.document_id)
+                storage.delete(organization.id, result.document_id)
             except Exception:
                 pass
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")

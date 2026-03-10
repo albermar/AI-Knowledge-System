@@ -37,6 +37,7 @@ from app.domain.interfaces import PromptBuilderInterface, RetrieverInterface, Em
 
 from app.application.dto import IngestDocumentResult, NewOrganizationResult
 
+from app.application.services.api_key import generate_api_key, hash_api_key
 
 def approx_token_count(text: str) -> int:
     #we approximate 4 chars per token. Replace later with real tokenizer. 
@@ -169,11 +170,20 @@ class NewOrganization:
         if self.org_repo.get_by_name(clean) is not None:
             raise OrganizationAlreadyExistsError("Organization with this name already exists.")
         
-        new_org = Organization(name=clean)
+        #create api key + hash:
+        api_key = generate_api_key()
+        api_key_hash = hash_api_key(api_key)        
         
+        print(f"Generated API key for new organization '{clean}': {api_key} \n\n (hash: {api_key_hash})") #log the generated API key. In production, consider logging only the hash and securely storing the plain API key for retrieval, since this is the only time we will see it.
+        
+        
+        new_org = Organization(name=clean, api_key_hash=api_key_hash) #store api key hash
+        
+        print (f"Organization hash: {new_org.api_key_hash}")
         try:
             self.org_repo.add(new_org)
-            return NewOrganizationResult(id=new_org.id, name=new_org.name, created_at=new_org.created_at)
+            #print(f"hash repo{self.org_repo.get_by_id(new_org.id).api_key_hash}")
+            return NewOrganizationResult(id=new_org.id, name=new_org.name, created_at=new_org.created_at, api_key=api_key) #but return plain api key for the user to see only once.
         except Exception as e:
             raise PersistenceError(f"Failed to persist new organization: {str(e)}") from e
         

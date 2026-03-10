@@ -17,7 +17,7 @@ class V1_Retriever(RetrieverInterface):
         
         # We don't save the embed of the question for now.
         
-        retrieved_chunks: list[RetrievedChunk] = self.chunk_repo.vector_search(organization_id, embedded_question, top_k=5)
+        retrieved_chunks: list[RetrievedChunk] = self.chunk_repo.vector_search(organization_id=organization_id, embedded_question=embedded_question, top_k=5)
         
         return retrieved_chunks
         

@@ -1,10 +1,7 @@
      
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional
 import uuid
-
-from app.domain.entities import LLMUsage
 
 # -- Use case results -- #
 
@@ -19,6 +16,7 @@ class IngestDocumentResult:
 class NewOrganizationResult:
     id: uuid.UUID
     name: str
+    api_key: str
     created_at: datetime
     
 @dataclass(frozen=True)
