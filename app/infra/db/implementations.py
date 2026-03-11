@@ -191,15 +191,22 @@ class PostgreSQL_ChunkRepository(ChunkRepositoryInterface):
         )
         
         #build retrieved chunks with chunk id, content, chunk index and similarity score:
-        return [
-        RetrievedChunk(
-            chunk_id=orm_obj.id,
-            content=orm_obj.content,
-            chunk_index=orm_obj.chunk_index,
-            similarity_score=1.0 - float(distance),
-        )
-        for orm_obj, distance in rows
-    ]
+        retrieved_chunks = []
+
+        for orm_obj, distance in rows:
+            raw_similarity = 1.0 - float(distance)
+            similarity_score = max(0.0, min(1.0, raw_similarity))
+
+            retrieved_chunks.append(
+                RetrievedChunk(
+                    chunk_id=orm_obj.id,
+                    content=orm_obj.content,
+                    chunk_index=orm_obj.chunk_index,
+                    similarity_score=similarity_score,
+                )
+            )
+
+        return retrieved_chunks
         
 
 class PostgreSQL_QueryRepository(QueryRepositoryInterface):
@@ -240,6 +247,12 @@ class PostgreSQL_QueryRepository(QueryRepositoryInterface):
             orm_obj.answer = query.answer
             orm_obj.latency_ms = query.latency_ms
             self.db_session.flush()
+    
+    def get_by_id(self, organization_id: uuid.UUID, id: uuid.UUID) -> Query | None: #double safety with organization_id as a parameter.
+        orm_obj = self.db_session.query(QueryORM).filter_by(id=id, organization_id=organization_id).first()
+        if orm_obj is not None:
+            return self._to_entity(orm_obj)
+        return None
 
 class PostgreSQL_LLMUsageRepository(LLMUsageRepositoryInterface):
     
@@ -275,6 +288,15 @@ class PostgreSQL_LLMUsageRepository(LLMUsageRepositoryInterface):
         orm_obj = self._to_orm(llm_usage)
         self.db_session.add(orm_obj)
         self.db_session.flush()
+    
+    def get_by_query_id(self, organization_id: uuid.UUID, query_id: uuid.UUID) -> List[LLMUsage]:
+        orm_objs = (
+            self.db_session.query(LLMUsageORM)
+            .join(QueryORM, LLMUsageORM.query_id == QueryORM.id)
+            .filter(LLMUsageORM.query_id == query_id, QueryORM.organization_id == organization_id)
+            .all()
+        )
+        return [self._to_entity(o) for o in orm_objs]
 
 class PostgreSQL_QueryChunkRepository(QueryChunkRepositoryInterface):
     def __init__(self, db_session: Session):
@@ -302,3 +324,13 @@ class PostgreSQL_QueryChunkRepository(QueryChunkRepositoryInterface):
         orm_objs = [self._to_orm(qc) for qc in query_chunks]
         self.db_session.add_all(orm_objs)
         self.db_session.flush()
+    
+    def get_by_query_id(self, organization_id: uuid.UUID, query_id: uuid.UUID) -> List[QueryChunk]:
+        orm_objs = (
+            self.db_session.query(QueryChunkORM)
+            .join(ChunkORM, QueryChunkORM.chunk_id == ChunkORM.id)
+            .filter(QueryChunkORM.query_id == query_id, ChunkORM.organization_id == organization_id)
+            .order_by(QueryChunkORM.rank.asc().nulls_last())
+            .all()
+        )
+        return [self._to_entity(o) for o in orm_objs]   
