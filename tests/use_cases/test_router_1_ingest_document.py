@@ -11,7 +11,6 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.api.main import app
-from app.application.services import api_key
 from app.infra.db.engine import get_db_session
 from app.infra.db.implementations import (
     PostgreSQL_OrganizationRepository,
