@@ -1,3 +1,5 @@
+import os
+
 from app.domain.entities import Organization
 
 from fastapi import Depends, HTTPException, Header
@@ -7,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.infra.db.implementations import PostgreSQL_OrganizationRepository
 from app.application.services.api_key import hash_api_key
 
+from app.infra.llm.implementations import OpenAILLMClient
 
 def get_current_organization(
         api_key: str = Header(..., alias="X-API-Key"),
@@ -21,3 +24,8 @@ def get_current_organization(
     if organization is None:
         raise HTTPException(status_code=401, detail="Invalid API key")
     return organization
+
+
+
+def get_llm_client():
+    return OpenAILLMClient()

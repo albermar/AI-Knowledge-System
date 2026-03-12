@@ -4,6 +4,7 @@ Tests the entire vertical pipeline: API -> Auth -> Use Case -> Retriever -> LLM 
 """
 import io
 import uuid
+from app.api.dependencies import get_llm_client
 import pytest
 from pathlib import Path
 from fastapi.testclient import TestClient
@@ -20,6 +21,7 @@ from app.domain.entities import Organization
 from app.application.services.api_key import generate_api_key, hash_api_key
 from tests.use_cases.helpers import make_db_session
 
+from app.infra.llm.implementations import FakeLLMClient
 
 # Counter to ensure unique organization names across all tests
 _org_counter = 0
@@ -47,7 +49,11 @@ def client(db_session: Session):
         finally:
             pass  # Don't close here, let the fixture handle it
     
+    def override_get_llm_client():        
+        return FakeLLMClient()
+    
     app.dependency_overrides[get_db_session] = override_get_db_session
+    app.dependency_overrides[get_llm_client] = override_get_llm_client
     
     with TestClient(app) as test_client:
         yield test_client
@@ -59,44 +65,43 @@ def client(db_session: Session):
 @pytest.fixture
 def test_organization_with_documents(db_session: Session, client: TestClient):
     """Fixture that creates a test organization with ingested documents"""
+
     from app.infra.db.implementations import PostgreSQL_OrganizationRepository
-    
+
     org_repo = PostgreSQL_OrganizationRepository(db_session)
-    
-    # Generate API key and hash
+
     api_key = generate_api_key()
     api_key_hash = hash_api_key(api_key)
-    
-    # Create organization with unique name
-    org = Organization(name=get_unique_org_name("Question Test Org"), api_key_hash=api_key_hash)
+
+    org = Organization(
+        name=get_unique_org_name("Question Test Org"),
+        api_key_hash=api_key_hash
+    )
+
     org_repo.add(org)
     db_session.commit()
-    
-    # Ingest a sample document to have chunks for retrieval
+
     pdf_path = Path("./samples/pdf-sample-test.pdf")
+
     if pdf_path.exists():
         with open(pdf_path, "rb") as f:
             pdf_bytes = f.read()
-        
-        # Override dependency for ingestion
-        def override_get_db_session_ingest():
-            try:
-                yield db_session
-            finally:
-                pass
-        
-        app.dependency_overrides[get_db_session] = override_get_db_session_ingest
-        
-        with TestClient(app) as ingest_client:
-            headers = {"X-API-Key": api_key}
-            files = {"file": ("test-doc.pdf", io.BytesIO(pdf_bytes), "application/pdf")}
-            response = ingest_client.post("/api/ingest-document", headers=headers, files=files)
-            
-            if response.status_code == 200:
-                db_session.commit()
-        
-        app.dependency_overrides.clear()
-        
+
+        headers = {"X-API-Key": api_key}
+
+        files = {
+            "file": ("test-doc.pdf", io.BytesIO(pdf_bytes), "application/pdf")
+        }
+
+        response = client.post(
+            "/api/ingest-document",
+            headers=headers,
+            files=files,
+        )
+
+        if response.status_code == 200:
+            db_session.commit()
+
     return org, api_key
 
 

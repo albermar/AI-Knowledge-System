@@ -1,5 +1,6 @@
 import uuid
 
+from app.domain.interfaces import LLMInterface
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -29,8 +30,9 @@ from app.infra.db.implementations import (
 
 from app.infra.retriever.implementations import V1_Retriever
 from app.application.services.prompt_builder import V1_PromptBuilder
-from app.infra.llm.implementations import FakeLLMClient
 from app.infra.embedder.implementations import SentenceTransformerEmbedder
+
+from app.api.dependencies import get_llm_client
 
 router = APIRouter()
 
@@ -42,6 +44,7 @@ DEFAULT_ORGANIZATION_ID = uuid.UUID("00000000-0000-0000-0000-000000000000")
 async def ask_question(
     payload: AskQuestionRequest,
     organization: Organization = Depends(get_current_organization),
+    llm_client: LLMInterface = Depends(get_llm_client),
     db: Session = Depends(get_db_session),
 ):
     # repositories
@@ -60,8 +63,7 @@ async def ask_question(
     )
 
     prompt_builder = V1_PromptBuilder()
-    llm_client = FakeLLMClient()
-
+    
     # use case
     use_case = AskQuestion(
         org_repo=org_repo,

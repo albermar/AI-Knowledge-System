@@ -252,7 +252,7 @@ class AskQuestion:
         except Exception as e:
             raise UseCaseError(f"Failed to build prompt: {str(e)}") from e
         
-        # 6. Call the LLM        
+        # 6. Call the LLM. Test must call Fake LLM but real will call OpenAI or other provider.
         try:
             llm_response: LLMResponse = self.llm_client.call(prompt)
         except Exception as e:
