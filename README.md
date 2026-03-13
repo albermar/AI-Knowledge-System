@@ -265,7 +265,7 @@ OPENAI_API_KEY = xxxxxx
 
 ### 6. Run the API
 ```
-uvicorn app.main:app --reload
+uvicorn app.api.main:app --reload
 ```
 
 At this point, the system is running with:

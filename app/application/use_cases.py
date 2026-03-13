@@ -170,17 +170,12 @@ class NewOrganization:
         
         #create api key + hash:
         api_key = generate_api_key()
-        api_key_hash = hash_api_key(api_key)        
-        
-        print(f"Generated API key for new organization '{clean}': {api_key} \n\n (hash: {api_key_hash})") #log the generated API key. In production, consider logging only the hash and securely storing the plain API key for retrieval, since this is the only time we will see it.
-        
+        api_key_hash = hash_api_key(api_key) 
         
         new_org = Organization(name=clean, api_key_hash=api_key_hash) #store api key hash
         
-        print (f"Organization hash: {new_org.api_key_hash}")
         try:
             self.org_repo.add(new_org)
-            #print(f"hash repo{self.org_repo.get_by_id(new_org.id).api_key_hash}")
             return NewOrganizationResult(id=new_org.id, name=new_org.name, created_at=new_org.created_at, api_key=api_key) #but return plain api key for the user to see only once.
         except Exception as e:
             raise PersistenceError(f"Failed to persist new organization: {str(e)}") from e
