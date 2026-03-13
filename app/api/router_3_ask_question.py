@@ -30,7 +30,7 @@ from app.infra.db.implementations import (
 
 from app.infra.retriever.implementations import V1_Retriever
 from app.application.services.prompt_builder import V1_PromptBuilder
-from app.infra.embedder.implementations import SentenceTransformerEmbedder
+#from app.infra.embedder.implementations import SentenceTransformerEmbedder
 
 from app.api.dependencies import get_llm_client
 
@@ -39,7 +39,7 @@ router = APIRouter()
 # TEMPORARY — until API key auth is implemented
 DEFAULT_ORGANIZATION_ID = uuid.UUID("00000000-0000-0000-0000-000000000000")
 
-
+'''
 @router.post("/questions", response_model=AskQuestionResponse, status_code=200)
 async def ask_question(
     payload: AskQuestionRequest,
@@ -108,3 +108,5 @@ async def ask_question(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+        
+'''

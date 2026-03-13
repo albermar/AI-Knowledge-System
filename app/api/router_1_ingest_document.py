@@ -12,7 +12,7 @@ from app.infra.db.engine import get_db_session
 from app.api.schemas import IngestDocumentResponse
 
 from app.infra.db.implementations import PostgreSQL_DocumentRepository, PostgreSQL_OrganizationRepository, PostgreSQL_ChunkRepository
-from app.infra.embedder.implementations import SentenceTransformerEmbedder
+#from app.infra.embedder.implementations import SentenceTransformerEmbedder
 from app.infra.parser.implementations import V1_PDFParser
 from app.infra.storage.implementations import Local_DocumentStorage 
 from app.application.services.chunker import V1_Chunker
@@ -24,6 +24,7 @@ router = APIRouter()
 MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024  #TODO: get from config
 DEFAULT_STORAGE_PATH = "./storage" #TODO: get from config
 
+'''
 @router.post("/ingest-document", response_model = IngestDocumentResponse )
 async def ingest_document(
         file: UploadFile = File(...), 
@@ -88,3 +89,5 @@ async def ingest_document(
             except Exception:
                 pass
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
+        
+'''
