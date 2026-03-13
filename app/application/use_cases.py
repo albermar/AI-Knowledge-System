@@ -2,7 +2,7 @@
 from dataclasses import dataclass
 import uuid
 
-from app.application.dto import AskQuestionResult
+from app.application.dto import AskQuestionResult, DashboardResult, DashboardUsageSummary, DashboardDocument, DashboardQuery, NewOrganizationResult, IngestDocumentResult
 from app.domain.entities import Document,Chunk, LLMUsage, Organization, Query, QueryChunk
 from app.domain.interfaces import ChunkRepositoryInterface, ChunkerInterface, DocumentRepositoryInterface, DocumentStorageInterface, LLMUsageRepositoryInterface, OrganizationRepositoryInterface, PDFParserInterface, QueryChunkRepositoryInterface, QueryRepositoryInterface
 
@@ -34,8 +34,6 @@ from app.application.exceptions import (
 from app.domain.types import LLMResponse, RetrievedChunk
 
 from app.domain.interfaces import PromptBuilderInterface, RetrieverInterface, EmbedderInterface, LLMInterface
-
-from app.application.dto import IngestDocumentResult, NewOrganizationResult
 
 from app.application.services.api_key import generate_api_key, hash_api_key
 
@@ -307,6 +305,116 @@ class AskQuestion:
             total_tokens=usage.total_tokens,
             estimated_cost_usd=usage.estimated_cost_usd
         )
-    
-        
-        
+
+
+@dataclass
+class GetOrganizationDashboard:
+    org_repo: OrganizationRepositoryInterface
+    doc_repo: DocumentRepositoryInterface
+    chunk_repo: ChunkRepositoryInterface
+    query_repo: QueryRepositoryInterface
+    llm_usage_repo: LLMUsageRepositoryInterface
+
+    def execute(self, organization_id: uuid.UUID) -> DashboardResult:
+        # -----------------------------
+        # Organization
+        # -----------------------------
+        organization = self.org_repo.get_by_id(organization_id)
+
+        if not organization:
+            raise OrganizationNotFoundError(
+                f"Organization {organization_id} not found"
+            )
+
+        # -----------------------------
+        # Documents
+        # -----------------------------
+        documents = self.doc_repo.list_by_organization(organization_id)
+
+        dashboard_documents = []
+
+        for doc in documents:
+            chunk_count = self.chunk_repo.count_by_document_id(
+                organization_id=organization_id,
+                document_id=doc.id,
+            )
+
+            dashboard_documents.append(
+                DashboardDocument(
+                    document_id=str(doc.id),
+                    filename=doc.title,
+                    created_at=str(doc.created_at),
+                    chunks_created=chunk_count,
+                )
+            )
+
+        # -----------------------------
+        # Queries
+        # -----------------------------
+        queries = self.query_repo.list_by_organization_id(organization_id)
+
+        dashboard_queries = []
+
+        total_prompt_tokens = 0
+        total_completion_tokens = 0
+        total_tokens = 0
+        total_cost = 0.0
+        models_used = set()
+
+        for q in queries:
+            usage = self.llm_usage_repo.get_by_query_id(
+                organization_id=organization_id,
+                query_id=q.id,
+            )
+
+            if usage:
+                total_prompt_tokens += usage.prompt_tokens
+                total_completion_tokens += usage.completion_tokens
+                total_tokens += usage.total_tokens
+                total_cost += usage.estimated_cost_usd or 0.0
+
+                if usage.model_name:
+                    models_used.add(usage.model_name)
+
+                model_name = usage.model_name
+                tokens = usage.total_tokens
+                cost = usage.estimated_cost_usd or 0.0
+            else:
+                model_name = None
+                tokens = 0
+                cost = 0.0
+
+            dashboard_queries.append(
+                DashboardQuery(
+                    query_id=str(q.id),
+                    question=q.question,
+                    created_at=str(q.created_at),
+                    model_name=model_name,
+                    total_tokens=tokens,
+                    estimated_cost_usd=cost,
+                )
+            )
+
+        # -----------------------------
+        # Usage summary
+        # -----------------------------
+        usage_summary = DashboardUsageSummary(
+            request_count=len(dashboard_queries),
+            total_prompt_tokens=total_prompt_tokens,
+            total_completion_tokens=total_completion_tokens,
+            total_tokens=total_tokens,
+            total_estimated_cost_usd=total_cost,
+            models_used=sorted(models_used),
+        )
+
+        # -----------------------------
+        # Result
+        # -----------------------------
+        return DashboardResult(
+            organization_id=str(organization.id),
+            organization_name=organization.name,
+            organization_created_at=str(organization.created_at),
+            documents=dashboard_documents,
+            queries=dashboard_queries,
+            usage_summary=usage_summary,
+        )

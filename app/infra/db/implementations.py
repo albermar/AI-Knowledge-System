@@ -207,7 +207,14 @@ class PostgreSQL_ChunkRepository(ChunkRepositoryInterface):
             )
 
         return retrieved_chunks
-        
+
+    def count_by_document_id(self, organization_id: uuid.UUID, document_id: uuid.UUID) -> int:
+        count = (
+            self.db_session.query(ChunkORM)
+            .filter_by(document_id=document_id, organization_id=organization_id)
+            .count()
+        )
+        return count
 
 class PostgreSQL_QueryRepository(QueryRepositoryInterface):
     def __init__(self, db_session: Session):
@@ -253,7 +260,11 @@ class PostgreSQL_QueryRepository(QueryRepositoryInterface):
         if orm_obj is not None:
             return self._to_entity(orm_obj)
         return None
-
+    
+    def list_by_organization_id(self, organization_id: uuid.UUID) -> List[Query]:
+        orm_objs = self.db_session.query(QueryORM).filter_by(organization_id=organization_id).all()
+        return [self._to_entity(o) for o in orm_objs]
+    
 class PostgreSQL_LLMUsageRepository(LLMUsageRepositoryInterface):
     
     def __init__(self, db_session: Session):
@@ -289,14 +300,15 @@ class PostgreSQL_LLMUsageRepository(LLMUsageRepositoryInterface):
         self.db_session.add(orm_obj)
         self.db_session.flush()
     
-    def get_by_query_id(self, organization_id: uuid.UUID, query_id: uuid.UUID) -> List[LLMUsage]:
-        orm_objs = (
+    #it must return 1, because 1 query = 1 usage
+    def get_by_query_id(self, organization_id: uuid.UUID, query_id: uuid.UUID) -> LLMUsage | None: #double safety with organization_id as a parameter.
+        orm_obj = (
             self.db_session.query(LLMUsageORM)
             .join(QueryORM, LLMUsageORM.query_id == QueryORM.id)
             .filter(LLMUsageORM.query_id == query_id, QueryORM.organization_id == organization_id)
-            .all()
+            .first()
         )
-        return [self._to_entity(o) for o in orm_objs]
+        return None if orm_obj is None else self._to_entity(orm_obj)
 
 class PostgreSQL_QueryChunkRepository(QueryChunkRepositoryInterface):
     def __init__(self, db_session: Session):
