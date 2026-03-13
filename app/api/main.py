@@ -1,5 +1,6 @@
+print("main: before fastapi import", flush=True)
 from fastapi import FastAPI
-from fastapi import FastAPI
+print("main: fastapi imported", flush=True)
 
 print("main: before router 1 import")
 from app.api import router_1_ingest_document
