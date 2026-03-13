@@ -11,6 +11,9 @@ from app.application.services.api_key import hash_api_key
 
 from app.infra.llm.implementations import OpenAILLMClient
 
+from functools import lru_cache
+from app.infra.embedder.implementations import OpenAIEmbedder
+
 def get_current_organization(
         api_key: str = Header(..., alias="X-API-Key"),
         db: Session = Depends(get_db_session)
@@ -29,3 +32,11 @@ def get_current_organization(
 
 def get_llm_client():
     return OpenAILLMClient()
+
+@lru_cache 
+def get_embedder() -> OpenAIEmbedder:
+    return OpenAIEmbedder(
+        api_key=os.environ["OPENAI_API_KEY"],
+        model_name=os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small"),
+        dimensions=int(os.getenv("OPENAI_EMBEDDING_DIMENSIONS", "384")),
+    )

@@ -1,10 +1,10 @@
 import uuid
 
-from app.domain.interfaces import LLMInterface
+from app.domain.interfaces import EmbedderInterface, LLMInterface
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import get_current_organization
+from app.api.dependencies import get_current_organization, get_embedder
 from app.infra.db.engine import get_db_session
 from app.api.schemas import AskQuestionRequest, AskQuestionResponse
 
@@ -36,16 +36,13 @@ from app.api.dependencies import get_llm_client
 
 router = APIRouter()
 
-# TEMPORARY — until API key auth is implemented
-DEFAULT_ORGANIZATION_ID = uuid.UUID("00000000-0000-0000-0000-000000000000")
-
-'''
 @router.post("/questions", response_model=AskQuestionResponse, status_code=200)
 async def ask_question(
     payload: AskQuestionRequest,
     organization: Organization = Depends(get_current_organization),
     llm_client: LLMInterface = Depends(get_llm_client),
     db: Session = Depends(get_db_session),
+    embedder: EmbedderInterface = Depends(get_embedder)
 ):
     # repositories
     org_repo = PostgreSQL_OrganizationRepository(db)
@@ -55,7 +52,7 @@ async def ask_question(
     chunk_repo = PostgreSQL_ChunkRepository(db)
 
     # services
-    embedder = SentenceTransformerEmbedder()
+    embedder = embedder
 
     retriever = V1_Retriever(
         chunk_repo=chunk_repo,
@@ -109,4 +106,3 @@ async def ask_question(
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
         
-'''

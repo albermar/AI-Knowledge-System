@@ -6,7 +6,7 @@ import requests
 import streamlit as st
 
 DEFAULT_API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
-REQUEST_TIMEOUT_SECONDS = 60
+REQUEST_TIMEOUT_SECONDS = 300
 
 
 class APIError(Exception):

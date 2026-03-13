@@ -1,9 +1,10 @@
 from datetime import datetime
 import uuid
 
-from app.api.dependencies import get_current_organization
+from app.api.dependencies import get_current_organization, get_embedder
 from app.domain.entities import Organization
 from app.application.exceptions import ChunkPersistenceError, ChunkingError, DocumentAlreadyExistsError, DocumentPersistError, EmptyFileError, OrganizationNotFoundError, ParsingError, StorageDeleteError, StorageWriteError
+from app.domain.interfaces import EmbedderInterface
 from fastapi import File, UploadFile, Depends, HTTPException
 from fastapi import APIRouter
 from sqlalchemy.orm import Session 
@@ -24,12 +25,13 @@ router = APIRouter()
 MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024  #TODO: get from config
 DEFAULT_STORAGE_PATH = "./storage" #TODO: get from config
 
-'''
+
 @router.post("/ingest-document", response_model = IngestDocumentResponse )
 async def ingest_document(
         file: UploadFile = File(...), 
         organization: Organization = Depends(get_current_organization),
-        db: Session = Depends(get_db_session)
+        db: Session = Depends(get_db_session),
+        embedder: EmbedderInterface = Depends(get_embedder)
     ):
     
     file_bytes = await file.read() 
@@ -50,7 +52,7 @@ async def ingest_document(
         org_repo = PostgreSQL_OrganizationRepository(db),
         doc_repo = PostgreSQL_DocumentRepository(db),   
         chunk_repo = PostgreSQL_ChunkRepository(db),
-        embedder= SentenceTransformerEmbedder(),
+        embedder= embedder,
         storage = Local_DocumentStorage(DEFAULT_STORAGE_PATH),
         parser = V1_PDFParser(),
         chunker = V1_Chunker()                              
@@ -89,5 +91,3 @@ async def ingest_document(
             except Exception:
                 pass
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
-        
-'''
