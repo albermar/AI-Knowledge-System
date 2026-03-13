@@ -10,17 +10,25 @@
 ![Architecture](https://img.shields.io/badge/architecture-clean--architecture-red)
 
 ## Overview
-Production-style multi-tenant Retrieval-Augmented Generation (RAG) backend built with FastAPI, PostgreSQL + pgvector, SentenceTransformers embeddings, and OpenAI LLMs.
 
-Organizations can ingest documents and ask questions over their knowledge base using semantic search + LLM generation.
+Production-style multi-tenant **Retrieval-Augmented Generation (RAG)** backend built with **FastAPI**, **PostgreSQL + pgvector**, **OpenAI embeddings**, and **OpenAI LLMs**.
 
-The system tracks queries, token usage, model usage, and estimated cost per organization, and exposes a dashboard API for analytics.
+Organizations can ingest documents and ask questions over their knowledge base using **semantic search + LLM generation**.
 
-Live demo:
-https://YOUR_STREAMLIT_DEMO_LINK
+The system tracks **queries, token usage, model usage, latency, and estimated cost per organization**, and exposes a **dashboard API** for analytics and monitoring.
+
+A **Streamlit demo application** is included to allow users to:
+
+- create organizations
+- upload documents
+- ask questions
+- inspect system usage and statistics
+
+Live demo:  
+https://ai-knowledge-system-rag.streamlit.app/
 
 API documentation:
-http://localhost:8000/docs
+https://ai-knowledge-api-a2kk.onrender.com/docs
 
 ## Index
 
@@ -35,33 +43,45 @@ http://localhost:8000/docs
 
 ## Core Features
 
-**Multi-tenant architecture**: Each organization operates an isolated workspace with its own documents, queries, and usage analytics.
+- **Multi-tenant architecture**  
+  Each organization operates in an isolated workspace identified by an API key.
 
-**API key authentication with hashed storage**: Organizations authenticate using an API key sent via `X-API-Key`. Keys are stored as SHA-256 hashes in the database.
+- **Document ingestion pipeline**  
+  Upload PDF documents that are parsed and processed into smaller chunks.
 
-**Retrieval-Augmented Generation (RAG)**: Questions are answered by retrieving semantically relevant document chunks and generating responses with an LLM.
+- **Text chunking**  
+  Documents are split into manageable text chunks to improve retrieval accuracy.
 
-**LLM integration with OpenAI**: Answers are generated using OpenAI models through a pluggable LLM client abstraction.
+- **OpenAI embeddings**  
+  Each chunk is converted into a vector representation using **OpenAI embedding models**.
 
-**Vector search with PostgreSQL + pgvector**: Document embeddings are stored directly in PostgreSQL and queried using cosine similarity.
+- **Vector storage with pgvector**  
+  Embeddings are stored in PostgreSQL using the **pgvector** extension for similarity search.
 
-**Clean Architecture design**: Clear separation between API layer, application use cases, domain entities/interfaces, and infrastructure implementations.
+- **Semantic retrieval**  
+  User questions are embedded and matched against stored chunks using **vector similarity search**.
 
-**Pluggable infrastructure via interfaces**: Embedders, retrievers, LLM providers, parsers, and storage implementations can be swapped without modifying business logic.
+- **Retrieval-Augmented Generation (RAG)**  
+  The most relevant chunks are injected into the prompt and answered by an **OpenAI LLM**.
 
-**Document ingestion pipeline**: Uploaded documents are parsed, chunked, embedded, and stored for semantic retrieval.
+- **Query persistence**  
+  Every user query is stored for observability and analytics.
 
-**Document deduplication**: Files are identified using a SHA-256 hash to prevent ingesting the same document multiple times.
+- **Chunk attribution**  
+  The system records which chunks were used to generate each answer.
 
-**Query–chunk traceability**: The chunks used to build each prompt are persisted, enabling RAG debugging and retrieval analysis.
+- **LLM usage tracking**  
+  Prompt tokens, completion tokens, total tokens, latency, model name, and estimated cost are tracked.
 
-**LLM usage and cost tracking**: Each query records model name, token usage, latency, and estimated cost.
+- **Organization analytics endpoint**  
+  Aggregated statistics are available per organization (documents, chunks, queries, token usage, cost).
 
-**Local document storage**: Raw document bytes are stored on disk under `storage/{organization_id}/{document_id}.bin`, while document metadata and embeddings are persisted in PostgreSQL.
-
-**Interactive analytics dashboard**: The Streamlit demo displays documents, chunks, queries, token usage, and estimated cost per organization.
-
-**Dockerized vector database**: PostgreSQL with pgvector runs in Docker for reproducible local development.
+- **Streamlit demo interface**  
+  A simple UI allows users to:
+  - create organizations
+  - upload documents
+  - ask questions
+  - inspect system statistics
 
 ## Architecture
 
@@ -145,7 +165,7 @@ Store raw document bytes in local storage
   ↓
 Chunk text
   ↓
-Generate embeddings
+Generate embeddings using OpenAI Embeddings API
   ↓
 Store chunks and embeddings in PostgreSQL + pgvector
 ```
@@ -158,7 +178,7 @@ Authenticate organization via API key
   ↓
 Validate and persist query
   ↓
-Generate question embedding
+Generate question embedding using OpenAI Embeddings API
   ↓
 Retrieve top-k chunks with pgvector similarity search
   ↓
@@ -206,7 +226,7 @@ Interactive API documentation is available at `/docs` when the FastAPI server is
 | Backend | AI / RAG | Data | Tools |
 |--------|----------|------|------|
 | Python 3.11 | OpenAI API | PostgreSQL | Docker |
-| FastAPI | SentenceTransformers | pgvector | pytest |
+| FastAPI | OpenAI Embeddings | pgvector | pytest |
 | Uvicorn | PyPDF | psycopg | Streamlit |
 | SQLAlchemy | | | python-dotenv |
 | Alembic | | | |
