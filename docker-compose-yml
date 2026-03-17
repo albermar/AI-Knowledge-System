@@ -1,0 +1,26 @@
+version: "3.9"
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: project3_api
+    env_file:
+      - .env
+    networks:
+      - shared_net
+
+  streamlit:
+    build:
+      context: .
+      dockerfile: Dockerfile.streamlit
+    container_name: project3_streamlit
+    env_file:
+      - .env
+    networks:
+      - shared_net
+
+networks:
+  shared_net:
+    external: true
