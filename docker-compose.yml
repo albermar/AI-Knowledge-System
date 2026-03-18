@@ -8,6 +8,7 @@ services:
     container_name: project3_api
     env_file:
       - .env
+    restart: unless-stopped
     networks:
       - shared_net
 
@@ -18,6 +19,7 @@ services:
     container_name: project3_streamlit
     env_file:
       - .env
+    restart: unless-stopped
     networks:
       - shared_net
 
