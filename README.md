@@ -24,9 +24,9 @@ A **Streamlit demo application** is included to allow users to:
 - ask questions
 - inspect system usage and statistics
 
-Live demo: https://ai-knowledge-system-rag.streamlit.app/
+Live demo: https://app-rag.alberto.network
 
-API documentation: https://ai-knowledge-api-a2kk.onrender.com/docs
+API documentation: https://api-rag.alberto.network/docs
 
 ## Index
 
